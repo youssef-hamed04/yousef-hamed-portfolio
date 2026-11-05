@@ -11,7 +11,7 @@ export const profile = {
   githubHandle: "youssef-hamed04",
   cv: "/Yousef_Hamed_CV.pdf",
   intro:
-    "I build web and mobile front ends with React, Next.js and React Native, I've run a training centre's daily operations, and I design the logos and decks that go with the product.",
+    "I design apps in Figma and build them with React, Next.js and React Native. I've also run a training centre's daily operations, so I know how to keep a project moving.",
 };
 
 export type SignalKey = "engineer" | "manager" | "designer";
@@ -41,8 +41,8 @@ export const signals: {
     key: "designer",
     label: "Designer",
     wave: "Sawtooth",
-    body: "A 50-hour graphic design diploma in Photoshop, Illustrator and InDesign. I design logos, presentations and digital assets, so the interfaces I build come with an eye for type and layout.",
-    tools: ["Photoshop", "Illustrator", "InDesign", "Logo design", "Presentation design"],
+    body: "Two months of UI/UX work in Figma, taking apps from sitemap and style guide to finished screens, on top of a 50-hour graphic design diploma. I also design logos and presentations.",
+    tools: ["Figma", "UI/UX", "Photoshop", "Illustrator", "InDesign", "Logo design"],
   },
 ];
 
@@ -112,6 +112,36 @@ export const projects: {
     live: "https://react-final-ecommerce-projectt-squa.vercel.app",
     image: "/work/ecommerce-tall.jpg",
     url: "react-final-ecommerce-projectt-squa.vercel.app",
+  },
+];
+
+// The steps match the pages of the Shifaa Figma file, in order.
+export const designProcess = ["Inspiration", "Sitemap", "Colours and type", "Components", "Final screens"];
+
+const screens = (title: string, names: string[]) =>
+  names.map((name, i) => ({
+    src: `/work/uiux/${title.toLowerCase()}-${i + 1}-${name}.jpg`,
+    alt: `${title} ${name} screen`,
+  }));
+
+export const designProjects = [
+  {
+    title: "Shifaa",
+    titleAr: "شفاء",
+    kind: "Health app, designed right to left in Arabic",
+    body: "Patients find and filter doctors, book an appointment, upload a prescription for the pharmacy, pay, and track the delivery. 22 finished screens, built on a sitemap, a style guide and a component library.",
+    tags: ["Figma", "Mobile app", "Arabic RTL", "Design system"],
+    figma: "https://www.figma.com/design/6MobCcjNWCuQCTpukBiNJG/T4?node-id=245-4156",
+    screens: screens("Shifaa", ["onboarding", "home", "doctor", "booking", "pharmacy", "prescription", "success", "tracking"]),
+  },
+  {
+    title: "TastyGo",
+    titleAr: "",
+    kind: "Food delivery app",
+    body: "Browse restaurants by category, open a menu, choose a dish's size and extras, check out in three steps, then follow the rider on a live map.",
+    tags: ["Figma", "Mobile app", "Food delivery", "Icon set"],
+    figma: "https://www.figma.com/design/MgthCso8560QmswVhRjkQb/Yousef-Food-App-Ui?node-id=173-3874",
+    screens: screens("TastyGo", ["splash", "home", "restaurant", "product", "cart", "checkout", "tracking", "profile"]),
   },
 ];
 

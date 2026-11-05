@@ -967,6 +967,161 @@ main > section h2,
   font-size: 0.9rem;
 }
 
+/* UI/UX design */
+.design {
+  max-width: none;
+  padding-left: 0;
+  padding-right: 0;
+}
+.design-head,
+.case-copy {
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: 0 var(--gutter);
+}
+.design-lead {
+  max-width: 54ch;
+  font-size: 1.2rem;
+  color: var(--muted);
+}
+.process {
+  position: relative;
+  margin-top: 40px;
+}
+.process-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 19px;
+  height: 2px;
+  background: var(--line);
+}
+.process-line i {
+  display: block;
+  height: 100%;
+  background: var(--signal);
+  transform-origin: left;
+}
+.process ol {
+  position: relative;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+  counter-reset: step;
+}
+.process li {
+  counter-increment: step;
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+  font-weight: 500;
+}
+.process li::before {
+  content: counter(step);
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--ink);
+  border: 2px solid var(--signal);
+  color: var(--signal);
+  font: 700 1rem var(--display);
+}
+
+.case {
+  margin-top: clamp(80px, 10vw, 140px);
+}
+.case-copy {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 12px 56px;
+  align-items: end;
+}
+.case-copy .kind {
+  grid-column: 1 / -1;
+  color: var(--muted);
+}
+.case-copy h3 {
+  font-size: clamp(2.8rem, 6vw, 5rem);
+  font-weight: 800;
+  font-variation-settings: "wdth" 82;
+  letter-spacing: -0.02em;
+  line-height: 0.95;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0 0.35em;
+}
+.case-ar {
+  font: 600 0.55em var(--arabic);
+  color: var(--signal);
+}
+.case-body {
+  max-width: 56ch;
+}
+.case-copy .tags,
+.case-copy .links {
+  grid-column: 2;
+  margin-top: 0;
+}
+
+.rail-wrap {
+  margin-top: 48px;
+  padding: 24px 0 60px;
+  overflow: hidden;
+}
+.rail {
+  list-style: none;
+  margin: 0;
+  padding: 0 var(--gutter);
+  display: flex;
+  gap: clamp(16px, 2vw, 28px);
+  width: max-content;
+}
+.phone:nth-child(even) {
+  margin-top: 56px;
+}
+.phone-inner {
+  display: block;
+  width: clamp(200px, 17vw, 250px);
+  padding: 8px;
+  border-radius: 38px;
+  background: var(--ink-deep);
+  border: 1px solid var(--line);
+  box-shadow: 0 40px 60px -30px rgb(0 0 0 / 0.7);
+  transition: transform 0.6s var(--ease-out), box-shadow 0.6s var(--ease-out), border-color 0.6s;
+}
+.phone-inner:hover {
+  transform: translateY(-18px) rotate(-1.5deg);
+  border-color: var(--signal);
+  box-shadow: 0 60px 80px -30px rgb(0 0 0 / 0.8), 0 0 50px -20px var(--signal);
+}
+.phone-screen {
+  position: relative;
+  display: block;
+  aspect-ratio: 375 / 812;
+  border-radius: 30px;
+  overflow: hidden;
+  background: #fff;
+}
+/* Screens taller than the phone scroll to their bottom while hovered. */
+.phone-screen img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  transform: translateY(0);
+  transition: top 3s cubic-bezier(0.45, 0, 0.55, 1), transform 3s cubic-bezier(0.45, 0, 0.55, 1);
+}
+.phone-inner:hover .phone-screen img {
+  top: 100%;
+  transform: translateY(-100%);
+}
+
 /* Split-text masks need a little room for descenders. */
 [data-split] > div,
 .contact h2 > div {
@@ -975,6 +1130,40 @@ main > section h2,
 
 /* Below 900px the gallery stops pinning and the panels stack. */
 @media (max-width: 899px) {
+  .rail-wrap {
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+  .phone {
+    scroll-snap-align: center;
+  }
+  .case-copy {
+    grid-template-columns: 1fr;
+  }
+  .case-copy .tags,
+  .case-copy .links {
+    grid-column: 1;
+  }
+  .process ol {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .process-line {
+    top: 0;
+    bottom: 0;
+    left: 19px;
+    right: auto;
+    width: 2px;
+    height: auto;
+  }
+  .process-line i {
+    transform-origin: top;
+  }
+  .process li {
+    grid-template-columns: 40px 1fr;
+    align-items: center;
+  }
   .track {
     flex-direction: column;
     width: auto;
@@ -1036,6 +1225,9 @@ main > section h2,
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .rail-wrap {
+    overflow-x: auto;
+  }
   *,
   *::before,
   *::after {

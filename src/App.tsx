@@ -15,6 +15,7 @@ import {
 } from "./lib/motion";
 import { useMagnetic } from "./lib/useMagnetic";
 import { Contact } from "./sections/Contact";
+import { Design } from "./sections/Design";
 import { Hero } from "./sections/Hero";
 import { Path } from "./sections/Path";
 import { Signals } from "./sections/Signals";
@@ -98,6 +99,9 @@ export default function App() {
           <a href="#work" onClick={(e) => go(e, "#work")}>
             Work
           </a>
+          <a href="#design" onClick={(e) => go(e, "#design")}>
+            Design
+          </a>
           <a href="#path" onClick={(e) => go(e, "#path")}>
             Path
           </a>
@@ -115,6 +119,7 @@ export default function App() {
         <Marquee items={["Engineer", "Manager", "Designer"]} />
         <Signals solo={solo} />
         <Work />
+        <Design />
         <Stats />
         <Path />
       </main>
