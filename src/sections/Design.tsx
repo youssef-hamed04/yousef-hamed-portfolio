@@ -90,7 +90,9 @@ export function Design() {
       {designProjects.map((p) => (
         <article className="case" key={p.title}>
           <div className="case-copy">
-            <p className="kind">{p.kind}</p>
+            <p className="kind" data-decode>
+              {p.kind}
+            </p>
             <h3>
               {p.title}
               {p.titleAr && (

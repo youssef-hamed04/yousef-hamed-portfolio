@@ -191,15 +191,14 @@ img {
   opacity: 1;
 }
 
-/* Scroll progress + top bar */
-.progress {
+/* Scroll trace + top bar */
+.scroll-signal {
   position: fixed;
   inset: 0 0 auto;
-  height: 3px;
+  width: 100%;
+  height: 14px;
   z-index: 60;
-  background: var(--signal);
-  transform: scaleX(0);
-  transform-origin: left;
+  pointer-events: none;
 }
 .bar {
   position: fixed;

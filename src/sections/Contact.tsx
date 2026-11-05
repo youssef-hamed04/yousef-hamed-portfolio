@@ -19,15 +19,6 @@ export function Contact() {
         ease: "power4.out",
         scrollTrigger: { trigger: ".contact h2", start: "top 85%" },
       });
-      gsap.from(".mail, .contact-links li", {
-        y: 50,
-        opacity: 0,
-        duration: 0.9,
-        stagger: 0.08,
-        ease: "power3.out",
-        scrollTrigger: { trigger: ".mail", start: "top 90%" },
-      });
-
       // Hovering the heading sends a ripple through its letters.
       if (!finePointer()) return;
       const heading = root.current!.querySelector("h2")!;

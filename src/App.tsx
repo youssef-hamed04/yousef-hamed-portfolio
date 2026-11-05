@@ -2,8 +2,10 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Cursor } from "./components/Cursor";
 import { Marquee } from "./components/Marquee";
 import { Preloader } from "./components/Preloader";
+import { ScrollSignal } from "./components/ScrollSignal";
 import { profile, type SignalKey } from "./data";
 import {
+  decode,
   gsap,
   reducedMotion,
   scrollToHash,
@@ -22,8 +24,20 @@ import { Signals } from "./sections/Signals";
 import { Stats } from "./sections/Stats";
 import { Work } from "./sections/Work";
 
+const VISITED = "yh-visited";
+
+// Storage can be blocked (private windows, strict settings); the site works without it.
+const hasVisited = () => {
+  try {
+    return localStorage.getItem(VISITED) === "1";
+  } catch {
+    return false;
+  }
+};
+
 export default function App() {
   const [skipLoader] = useState(reducedMotion);
+  const [quickLoader] = useState(hasVisited);
   const [ready, setReady] = useState(skipLoader);
   const [solo, setSolo] = useState<SignalKey | null>(null);
   const bar = useRef<HTMLElement>(null);
@@ -41,8 +55,17 @@ export default function App() {
     if (ready) setScrollLocked(false);
   }, [ready]);
 
-  // Page-wide motion: section headings, the top progress line, and the bar
-  // that slips away while you scroll down and returns when you scroll up.
+  const reveal = () => {
+    setReady(true);
+    try {
+      localStorage.setItem(VISITED, "1");
+    } catch {
+      // Without storage the full loader simply plays again next time.
+    }
+  };
+
+  // Page-wide motion: section headings, decoded labels, and the bar that
+  // slips away while you scroll down and returns when you scroll up.
   useLayoutEffect(() => {
     if (!ready || reducedMotion()) return;
     const ctx = gsap.context(() => {
@@ -57,11 +80,7 @@ export default function App() {
         });
       });
 
-      gsap.to(".progress", {
-        scaleX: 1,
-        ease: "none",
-        scrollTrigger: { start: 0, end: "max", scrub: 0.3 },
-      });
+      gsap.utils.toArray<HTMLElement>("[data-decode]").forEach((el) => decode(el, { trigger: el, start: "top 88%" }));
 
       ScrollTrigger.create({
         start: 120,
@@ -83,9 +102,9 @@ export default function App() {
 
   return (
     <>
-      {!skipLoader && <Preloader onReveal={() => setReady(true)} />}
+      {!skipLoader && <Preloader onReveal={reveal} quick={quickLoader} />}
       <Cursor />
-      <div className="progress" aria-hidden="true" />
+      <ScrollSignal />
 
       <a className="skip" href="#main">
         Skip to content

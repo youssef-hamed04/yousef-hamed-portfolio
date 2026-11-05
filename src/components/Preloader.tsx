@@ -5,7 +5,8 @@ import { sinePath } from "../lib/wave";
 const WAVE = sinePath(600, 60, 3);
 
 // Counts to 100 while a signal draws across, then lifts away to reveal the page.
-export function Preloader({ onReveal }: { onReveal: () => void }) {
+// Returning visitors get a quick version so they aren't kept waiting each time.
+export function Preloader({ onReveal, quick = false }: { onReveal: () => void; quick?: boolean }) {
   const root = useRef<HTMLDivElement>(null);
   const count = useRef<HTMLSpanElement>(null);
   const reveal = useRef(onReveal);
@@ -17,14 +18,20 @@ export function Preloader({ onReveal }: { onReveal: () => void }) {
       const len = path.getTotalLength();
       gsap.set(path, { strokeDasharray: len, strokeDashoffset: len });
 
+      const counting = quick ? 0.6 : 1.8;
       const counter = { v: 0 };
       const tl = gsap.timeline();
-      tl.from(".loader-name span", { yPercent: 110, duration: 0.9, ease: "power4.out", stagger: 0.08 })
+      tl.from(".loader-name span", {
+        yPercent: 110,
+        duration: quick ? 0.5 : 0.9,
+        ease: "power4.out",
+        stagger: quick ? 0.04 : 0.08,
+      })
         .to(
           counter,
           {
             v: 100,
-            duration: 1.8,
+            duration: counting,
             ease: "power2.inOut",
             onUpdate: () => {
               count.current!.textContent = String(Math.round(counter.v)).padStart(3, "0");
@@ -32,19 +39,19 @@ export function Preloader({ onReveal }: { onReveal: () => void }) {
           },
           0.1
         )
-        .to(path, { strokeDashoffset: 0, duration: 1.8, ease: "power2.inOut" }, 0.1)
+        .to(path, { strokeDashoffset: 0, duration: counting, ease: "power2.inOut" }, 0.1)
         // Hold at 100 until the web fonts have arrived, so text never reflows mid-animation.
         .add(() => {
           tl.pause();
           document.fonts.ready.then(() => tl.resume());
         })
-        .to(".loader-inner", { yPercent: -40, opacity: 0, duration: 0.6, ease: "power3.in" })
+        .to(".loader-inner", { yPercent: -40, opacity: 0, duration: quick ? 0.35 : 0.6, ease: "power3.in" })
         .add(() => reveal.current())
-        .to(root.current, { yPercent: -100, duration: 1.1, ease: "power4.inOut" }, "-=0.15")
+        .to(root.current, { yPercent: -100, duration: quick ? 0.8 : 1.1, ease: "power4.inOut" }, "-=0.15")
         .set(root.current, { display: "none" });
     }, root);
     return () => ctx.revert();
-  }, []);
+  }, [quick]);
 
   return (
     <div className="loader" ref={root} aria-hidden="true">

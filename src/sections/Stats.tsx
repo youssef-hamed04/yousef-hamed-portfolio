@@ -23,14 +23,6 @@ export function Stats() {
           onUpdate: () => (el.textContent = format(counter.v, decimals)),
         });
       });
-      gsap.from(".stat", {
-        y: 60,
-        opacity: 0,
-        duration: 1,
-        stagger: 0.1,
-        ease: "power3.out",
-        scrollTrigger: { trigger: root.current, start: "top 85%" },
-      });
     }, root);
     return () => ctx.revert();
   }, []);

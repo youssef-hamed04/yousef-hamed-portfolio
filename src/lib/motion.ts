@@ -1,14 +1,25 @@
 import gsap from "gsap";
+import { ScrambleTextPlugin } from "gsap/ScrambleTextPlugin";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { SplitText } from "gsap/SplitText";
 import Lenis from "lenis";
 
-gsap.registerPlugin(ScrollTrigger, SplitText);
+gsap.registerPlugin(ScrollTrigger, SplitText, ScrambleTextPlugin);
 
 export { gsap, ScrollTrigger, SplitText };
 
 export const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 export const finePointer = () => window.matchMedia("(pointer: fine)").matches;
+
+// Small labels arrive like a signal being decoded: noise that settles into the text.
+export function decode(el: HTMLElement, scrollTrigger: ScrollTrigger.Vars) {
+  return gsap.to(el, {
+    duration: 1.1,
+    ease: "none",
+    scrambleText: { text: el.textContent ?? "", chars: "01<>/\\=+#", revealDelay: 0.3, speed: 0.5 },
+    scrollTrigger,
+  });
+}
 
 // Smooth scrolling, driven by GSAP's ticker so ScrollTrigger stays in sync.
 let lenis: Lenis | null = null;

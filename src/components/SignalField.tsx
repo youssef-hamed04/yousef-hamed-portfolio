@@ -14,6 +14,7 @@ const vertexShader = /* glsl */ `
   uniform float uMouseX;
   uniform float uMouseAmp;
   uniform float uPixelRatio;
+  uniform float uSize;
   attribute float aRow;
   varying float vRow;
   varying float vLevel;
@@ -38,7 +39,7 @@ const vertexShader = /* glsl */ `
 
     vec4 mv = modelViewMatrix * vec4(p, 1.0);
     gl_Position = projectionMatrix * mv;
-    gl_PointSize = mix(3.4, 1.6, aRow) * uPixelRatio * (6.0 / -mv.z);
+    gl_PointSize = mix(3.4, 1.6, aRow) * uSize * uPixelRatio * (6.0 / -mv.z);
     vRow = aRow;
     vLevel = abs(v);
   }
@@ -80,7 +81,10 @@ export function SignalField({ solo, ready }: Props) {
       setFallback(true);
       return;
     }
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    // Phones get about a third of the points at a lower resolution; the field
+    // spans the same depth, so it looks the same, just with larger dots.
+    const light = window.matchMedia("(pointer: coarse)").matches || el.clientWidth < 700;
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, light ? 1.5 : 2));
     el.appendChild(renderer.domElement);
 
     const scene = new THREE.Scene();
@@ -88,15 +92,16 @@ export function SignalField({ solo, ready }: Props) {
     camera.position.set(0, 1.5, 6.5);
     camera.lookAt(0, -0.2, -1.6);
 
-    const cols = 260;
-    const rows = 34;
+    const cols = light ? 150 : 260;
+    const rows = light ? 22 : 34;
+    const depth = 7.26;
     const positions = new Float32Array(cols * rows * 3);
     const rowAttr = new Float32Array(cols * rows);
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
         const i = r * cols + c;
         positions[i * 3] = (c / (cols - 1) - 0.5) * 10;
-        positions[i * 3 + 2] = -r * 0.22;
+        positions[i * 3 + 2] = -(r / (rows - 1)) * depth;
         rowAttr[i] = r / (rows - 1);
       }
     }
@@ -112,6 +117,7 @@ export function SignalField({ solo, ready }: Props) {
       uMouseX: { value: 0.5 },
       uMouseAmp: { value: 0 },
       uPixelRatio: { value: renderer.getPixelRatio() },
+      uSize: { value: light ? 1.35 : 1 },
       uGold: { value: new THREE.Color(css.getPropertyValue("--signal").trim()) },
       uBlue: { value: new THREE.Color(css.getPropertyValue("--trace").trim()) },
       uOpacity: { value: 1 },

@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef } from "react";
 import { BrowserShot } from "../components/BrowserShot";
 import { featured, profile, projects, smallProjects } from "../data";
-import { gsap } from "../lib/motion";
+import { decode, gsap } from "../lib/motion";
 
 const total = projects.length + 1;
 const position = (i: number) => `${i + 1} / ${total}`;
@@ -20,20 +20,21 @@ export function Work() {
       (context) => {
         const panels = gsap.utils.toArray<HTMLElement>(".panel");
 
+        const labels = (panel: HTMLElement) => panel.querySelectorAll<HTMLElement>(".panel-pos, .kind");
+
         if (context.conditions?.narrow) {
-          panels.forEach((panel) =>
-            gsap.from(panel, {
-              y: 80,
-              opacity: 0,
-              duration: 1,
-              ease: "power3.out",
-              scrollTrigger: { trigger: panel, start: "top 85%" },
-            })
-          );
+          panels.forEach((panel) => {
+            const enter = { trigger: panel, start: "top 85%" };
+            gsap.from(panel, { y: 80, opacity: 0, duration: 1, ease: "power3.out", scrollTrigger: enter });
+            labels(panel).forEach((label) => decode(label, enter));
+          });
         } else {
           // Vertical scroll drives the track sideways while the gallery is pinned.
           const t = track.current!;
           const distance = () => t.scrollWidth - window.innerWidth;
+          // Progress values at which each project sits centred on screen.
+          const stops = () =>
+            panels.map((p) => gsap.utils.clamp(0, 1, (p.offsetLeft - (window.innerWidth - p.offsetWidth) / 2) / distance()));
           const slide = gsap.to(t, {
             x: () => -distance(),
             ease: "none",
@@ -45,6 +46,14 @@ export function Work() {
               end: () => `+=${distance()}`,
               invalidateOnRefresh: true,
               anticipatePin: 1,
+              // When scrolling stops between projects, settle on the nearest one.
+              snap: {
+                snapTo: (value) => gsap.utils.snap(stops(), value),
+                inertia: false,
+                duration: { min: 0.3, max: 0.8 },
+                delay: 0.1,
+                ease: "power2.inOut",
+              },
             },
           });
           gsap.to(".gallery-progress i", {
@@ -73,6 +82,7 @@ export function Work() {
               ease: "power4.out",
               scrollTrigger: enter,
             });
+            labels(panel).forEach((label) => decode(label, enter));
 
             const inner = panel.querySelector(".shot-inner");
             if (inner && i > 0) {
@@ -88,15 +98,6 @@ export function Work() {
             }
           });
         }
-
-        gsap.from(".more li", {
-          x: -60,
-          opacity: 0,
-          duration: 0.8,
-          stagger: 0.08,
-          ease: "power3.out",
-          scrollTrigger: { trigger: ".more", start: "top 80%" },
-        });
       }
     );
     return () => mm.revert();

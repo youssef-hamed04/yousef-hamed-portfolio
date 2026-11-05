@@ -31,14 +31,6 @@ export function Path() {
           scrollTrigger: { trigger: item, start: "top 65%", toggleClass: "is-lit" },
         });
       });
-      gsap.from(".extras > div", {
-        y: 50,
-        opacity: 0,
-        duration: 0.9,
-        stagger: 0.12,
-        ease: "power3.out",
-        scrollTrigger: { trigger: ".extras", start: "top 85%" },
-      });
     }, root);
     return () => ctx.revert();
   }, []);
@@ -55,7 +47,9 @@ export function Path() {
         <ol className="timeline">
         {timeline.map((t) => (
           <li key={t.title + t.where}>
-            <p className="when">{t.when}</p>
+            <p className="when" data-decode>
+              {t.when}
+            </p>
             <div>
               <h3>
                 {t.title}, <span className="where">{t.where}</span>
