@@ -887,7 +887,7 @@ main,
 
 .extras {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1.6fr 1fr;
   gap: 48px;
   margin-top: 40px;
   padding-top: 40px;
@@ -901,6 +901,25 @@ main,
   margin: 0;
   padding-left: 1.1em;
   color: var(--muted);
+}
+.extras .certs {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 14px;
+}
+.certs li {
+  display: grid;
+  gap: 2px;
+  padding-left: 14px;
+  border-left: 2px solid var(--line);
+}
+.cert-name {
+  color: var(--paper);
+  font-weight: 500;
+}
+.cert-meta {
+  font-size: 0.9rem;
 }
 .extras dl {
   margin: 0;

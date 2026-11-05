@@ -47,7 +47,7 @@ export const signals: {
 ];
 
 export const featured = {
-  title: "EduPlatform",
+  title: "Student App",
   kind: "University learning platform",
   image: "/work/student-web.jpg",
   live: "https://student-web-gray.vercel.app",
@@ -95,7 +95,7 @@ export const projects: {
   },
   {
     title: "Ghar Sheet",
-    kind: "Machine learning web app",
+    kind: "Machine learning, ITI final project",
     body: "Estimates the price of a flat anywhere in 50+ Indian cities. I cleaned a messy 187K-row Kaggle dataset, trained a scikit-learn model on it, served it with FastAPI, and built the React form that asks for the listing's details.",
     stack: ["Python", "scikit-learn", "FastAPI", "React", "Docker"],
     repo: "https://github.com/youssef-hamed04/iti_Ai_Ml_Project",
@@ -165,10 +165,16 @@ export const timeline = [
     body: "Oversee agency operations and coordinate day-to-day management.",
   },
   {
+    when: "2026",
+    title: "AI and Machine Learning Foundations",
+    where: "ITI",
+    body: "A 90-hour programme: Python and NumPy, probability and statistics, linear algebra and optimisation, data preparation, machine learning, and neural networks. My final project was Ghar Sheet.",
+  },
+  {
     when: "2025 – 2026",
     title: "Front-end development training",
     where: "T-Square",
-    body: "HTML, CSS and JavaScript through to React, with a project at every stage.",
+    body: "HTML, CSS and JavaScript through to React, with a project at every stage and a React e-commerce store as the final project.",
   },
   {
     when: "2024 – Jul 2026",
@@ -189,7 +195,7 @@ export const timeline = [
     body: "Kept student records, codes and sheets accurate and easy to find.",
   },
   {
-    when: "2022 – now",
+    when: "Oct 2022 – Jan 2027",
     title: "B.Sc. Communications & Computers Engineering",
     where: "Mansoura University",
     body: "Cumulative GPA 3.6.",
@@ -198,8 +204,11 @@ export const timeline = [
 
 export const extras = {
   certifications: [
-    "Build with AI, Masr Edition",
-    "Graphic design diploma, 50 hours, Grand Notion Training Center",
+    { name: "AI and Machine Learning Foundations, 90 hours", issuer: "Information Technology Institute (ITI)", date: "Sep 2026" },
+    { name: "Introduction to Game Analysis, 30 hours in Metrica", issuer: "Beltagy Football Analysis Services", date: "Aug 2026" },
+    { name: "Front-End Developer Course", issuer: "T-Square Training Center", date: "Jun 2026" },
+    { name: "Build with AI, Masr Edition", issuer: "Certificate of attendance", date: "" },
+    { name: "Graphic design diploma, 50 hours", issuer: "Grand Notion Training Center", date: "" },
   ],
   languages: [
     { name: "Arabic", level: "Native" },

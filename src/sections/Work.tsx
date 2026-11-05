@@ -143,7 +143,7 @@ export function Work() {
             <BrowserShot
               image={featured.image}
               url={featured.url}
-              alt="Sign-in screen of the EduPlatform student web app, in Arabic"
+              alt="Sign-in screen of the Student App web version, in Arabic"
               href={featured.live}
             />
           </article>

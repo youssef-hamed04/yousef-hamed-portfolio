@@ -64,9 +64,15 @@ export function Path() {
       <div className="extras">
         <div>
           <h3>Certificates</h3>
-          <ul>
+          <ul className="certs">
             {extras.certifications.map((c) => (
-              <li key={c}>{c}</li>
+              <li key={c.name}>
+                <span className="cert-name">{c.name}</span>
+                <span className="cert-meta">
+                  {c.issuer}
+                  {c.date && `, ${c.date}`}
+                </span>
+              </li>
             ))}
           </ul>
         </div>
