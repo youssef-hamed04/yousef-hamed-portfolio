@@ -105,22 +105,17 @@ export function Design() {
                 <li key={t}>{t}</li>
               ))}
             </ul>
-            <p className="links">
-              <a href={p.figma} target="_blank" rel="noreferrer">
-                Open in Figma
-              </a>
-            </p>
           </div>
 
           <div className="rail-wrap">
             <ul className="rail" aria-label={`${p.title} screens`}>
               {p.screens.map((s) => (
                 <li className="phone" key={s.src}>
-                  <a className="phone-inner" href={p.figma} target="_blank" rel="noreferrer" data-cursor="Figma">
+                  <div className="phone-inner">
                     <span className="phone-screen">
                       <img src={s.src} alt={s.alt} loading="lazy" decoding="async" />
                     </span>
-                  </a>
+                  </div>
                 </li>
               ))}
             </ul>

@@ -131,7 +131,6 @@ export const designProjects = [
     kind: "Health app, designed right to left in Arabic",
     body: "Patients find and filter doctors, book an appointment, upload a prescription for the pharmacy, pay, and track the delivery. 22 finished screens, built on a sitemap, a style guide and a component library.",
     tags: ["Figma", "Mobile app", "Arabic RTL", "Design system"],
-    figma: "https://www.figma.com/design/6MobCcjNWCuQCTpukBiNJG/T4?node-id=245-4156",
     screens: screens("Shifaa", ["onboarding", "home", "doctor", "booking", "pharmacy", "prescription", "success", "tracking"]),
   },
   {
@@ -140,7 +139,6 @@ export const designProjects = [
     kind: "Food delivery app",
     body: "Browse restaurants by category, open a menu, choose a dish's size and extras, check out in three steps, then follow the rider on a live map.",
     tags: ["Figma", "Mobile app", "Food delivery", "Icon set"],
-    figma: "https://www.figma.com/design/MgthCso8560QmswVhRjkQb/Yousef-Food-App-Ui?node-id=173-3874",
     screens: screens("TastyGo", ["splash", "home", "restaurant", "product", "cart", "checkout", "tracking", "profile"]),
   },
 ];

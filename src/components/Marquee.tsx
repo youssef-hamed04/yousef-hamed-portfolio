@@ -3,6 +3,7 @@ import { gsap, reducedMotion, ScrollTrigger } from "../lib/motion";
 import { sinePath } from "../lib/wave";
 
 const SEPARATOR = sinePath(80, 24, 1.5, 2);
+const ARABIC = /[؀-ۿ]/;
 
 // An endless band of words. Scrolling speeds it up and flips its direction.
 export function Marquee({ items, reverse = false }: { items: string[]; reverse?: boolean }) {
@@ -43,7 +44,7 @@ export function Marquee({ items, reverse = false }: { items: string[]; reverse?:
         {[0, 1].map((copy) => (
           <div className="marquee-set" key={copy}>
             {set.map((word, i) => (
-              <span className="marquee-item" key={i}>
+              <span className="marquee-item" key={i} lang={ARABIC.test(word) ? "ar" : undefined}>
                 {word}
                 <svg viewBox="0 0 80 24">
                   <path d={SEPARATOR} />

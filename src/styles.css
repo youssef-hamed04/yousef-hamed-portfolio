@@ -10,7 +10,7 @@
 
   --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
   --body: "Instrument Sans", "Segoe UI", system-ui, sans-serif;
-  --arabic: "IBM Plex Sans Arabic", "Segoe UI", sans-serif;
+  --arabic: "Alexandria", "Segoe UI", sans-serif;
 
   --gutter: clamp(16px, 4vw, 56px);
   --max: 1280px;
@@ -483,6 +483,11 @@ main > section h2,
   white-space: nowrap;
   color: transparent;
   -webkit-text-stroke: 1.5px var(--trace);
+}
+.marquee-item:lang(ar) {
+  font-family: var(--arabic);
+  font-weight: 800;
+  font-variation-settings: normal;
 }
 .marquee-item:nth-child(3n + 2) {
   color: var(--signal);
@@ -1057,14 +1062,13 @@ main > section h2,
   gap: 0 0.35em;
 }
 .case-ar {
-  font: 600 0.55em var(--arabic);
+  font: 700 0.55em var(--arabic);
   color: var(--signal);
 }
 .case-body {
   max-width: 56ch;
 }
-.case-copy .tags,
-.case-copy .links {
+.case-copy .tags {
   grid-column: 2;
   margin-top: 0;
 }
@@ -1141,8 +1145,7 @@ main > section h2,
   .case-copy {
     grid-template-columns: 1fr;
   }
-  .case-copy .tags,
-  .case-copy .links {
+  .case-copy .tags {
     grid-column: 1;
   }
   .process ol {
