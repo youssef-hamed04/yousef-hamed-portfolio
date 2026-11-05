@@ -1,5 +1,4 @@
 import { useLayoutEffect, useRef } from "react";
-import { SignalField } from "../components/SignalField";
 import { profile, signals, type SignalKey } from "../data";
 import { gsap, reducedMotion, scrollToHash, SplitText } from "../lib/motion";
 import { useMagnetic } from "../lib/useMagnetic";
@@ -44,7 +43,6 @@ export function Hero({ ready, solo, onSolo }: Props) {
 
   return (
     <section className="hero" id="top" ref={root}>
-      <SignalField solo={solo} ready={ready} />
 
       <div className="hero-head">
         <h1 className="hero-name" aria-label={profile.name}>

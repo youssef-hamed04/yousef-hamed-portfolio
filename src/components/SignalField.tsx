@@ -15,6 +15,7 @@ const vertexShader = /* glsl */ `
   uniform float uMouseAmp;
   uniform float uPixelRatio;
   uniform float uSize;
+  uniform float uEnergy;
   attribute float aRow;
   varying float vRow;
   varying float vLevel;
@@ -35,7 +36,7 @@ const vertexShader = /* glsl */ `
              + 0.2 * uMix.z * sawWave(2.0 * (x + phase))) / total;
 
     float bump = 1.0 + uMouseAmp * exp(-pow((u - uMouseX) * 4.0, 2.0));
-    p.y += v * uTune * (1.0 - aRow * 0.55) * bump * 1.1;
+    p.y += v * uTune * (1.0 - aRow * 0.55) * bump * 1.1 * (1.0 + uEnergy * 0.9);
 
     vec4 mv = modelViewMatrix * vec4(p, 1.0);
     gl_Position = projectionMatrix * mv;
@@ -118,6 +119,7 @@ export function SignalField({ solo, ready }: Props) {
       uMouseAmp: { value: 0 },
       uPixelRatio: { value: renderer.getPixelRatio() },
       uSize: { value: light ? 1.35 : 1 },
+      uEnergy: { value: 0 },
       uGold: { value: new THREE.Color(css.getPropertyValue("--signal").trim()) },
       uBlue: { value: new THREE.Color(css.getPropertyValue("--trace").trim()) },
       uOpacity: { value: 1 },
@@ -157,37 +159,61 @@ export function SignalField({ solo, ready }: Props) {
     };
     window.addEventListener("pointermove", onMove);
 
-    // Scrolling out of the hero tips the field back and dims it.
-    const scroll = { p: 0 };
-    const st = ScrollTrigger.create({
-      trigger: el.closest("section"),
-      start: "top top",
-      end: "bottom top",
-      onUpdate: (self) => (scroll.p = self.progress),
-    });
+    // The field sits behind the whole page and changes pose by section: full in
+    // the hero, a lower, softer wave while you read, and strong again at contact.
+    const hero = { y: -0.35, tilt: 0, opacity: 1 };
+    const reading = { y: -0.95, tilt: 0.18, opacity: 0.6 };
+    const finale = { y: -0.6, tilt: 0.05, opacity: 0.9 };
+    const view = { ...hero };
+    const triggers: ScrollTrigger[] = [];
+    if (!reduced) {
+      // Low refresh priority so these measure after the pinned gallery adds its height.
+      const leave = gsap.fromTo(view, hero, {
+        ...reading,
+        ease: "none",
+        scrollTrigger: { trigger: "#top", start: "top top", end: "bottom top", scrub: true, refreshPriority: -1 },
+      });
+      // Ends at the bottom of the page, so the finale always completes.
+      const arrive = gsap.fromTo(view, reading, {
+        ...finale,
+        ease: "none",
+        immediateRender: false,
+        scrollTrigger: { trigger: "#contact", start: "top bottom", end: "bottom bottom", scrub: true, refreshPriority: -1 },
+      });
+      triggers.push(leave.scrollTrigger!, arrive.scrollTrigger!);
+    }
 
-    let visible = true;
-    const io = new IntersectionObserver(([entry]) => (visible = entry.isIntersecting));
-    io.observe(el);
+    // Scroll speed stirs the field up, the same way it swells the scope line.
+    const energy = { push: 0, value: 0 };
+    triggers.push(
+      ScrollTrigger.create({
+        start: 0,
+        end: "max",
+        onUpdate: (self) => (energy.push = Math.min(Math.abs(self.getVelocity()) / 2000, 1)),
+      })
+    );
 
-    const clock = new THREE.Clock();
-    const loop = () => {
-      if (!visible) return;
-      u.uTime.value = clock.getElapsedTime();
+    let time = 0;
+    const loop = (_t: number, delta: number) => {
+      energy.value += (energy.push - energy.value) * 0.08;
+      energy.push *= 0.92;
+      time += (delta / 1000) * (1 + energy.value * 2.5);
+      u.uTime.value = time;
+      u.uEnergy.value = energy.value;
       u.uMouseX.value += (pointer.x - u.uMouseX.value) * 0.05;
       u.uMouseAmp.value += ((1 - pointer.y) * 0.9 - u.uMouseAmp.value) * 0.05;
-      points.rotation.x = scroll.p * 0.7;
-      points.position.y = -scroll.p * 1.4;
-      u.uOpacity.value = 1 - scroll.p * 0.75;
+      points.rotation.x = view.tilt;
+      points.position.y = view.y;
+      u.uOpacity.value = view.opacity;
       render();
     };
     if (!reduced) gsap.ticker.add(loop);
+    else points.position.y = hero.y;
 
     return () => {
       gsap.ticker.remove(loop);
       ro.disconnect();
-      io.disconnect();
-      st.kill();
+      triggers.forEach((t) => t.kill());
       window.removeEventListener("pointermove", onMove);
       geometry.dispose();
       material.dispose();

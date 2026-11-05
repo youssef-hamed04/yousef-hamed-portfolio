@@ -3,7 +3,13 @@ import { WaveGlyph } from "../components/WaveGlyph";
 import { signals, type SignalKey } from "../data";
 import { finePointer, gsap, reducedMotion } from "../lib/motion";
 
-export function Signals({ solo }: { solo: SignalKey | null }) {
+type Props = {
+  solo: SignalKey | null;
+  // Hovering a card shows that role's wave in the background field.
+  onHover: (key: SignalKey | null) => void;
+};
+
+export function Signals({ solo, onHover }: Props) {
   const root = useRef<HTMLElement>(null);
 
   useLayoutEffect(() => {
@@ -54,7 +60,12 @@ export function Signals({ solo }: { solo: SignalKey | null }) {
       </h2>
       <div className="signal-grid">
         {signals.map((s) => (
-          <article key={s.key} className={`signal${solo === s.key ? " is-on" : ""}`}>
+          <article
+            key={s.key}
+            className={`signal${solo === s.key ? " is-on" : ""}`}
+            onPointerEnter={() => onHover(s.key)}
+            onPointerLeave={() => onHover(null)}
+          >
             <WaveGlyph kind={s.key} />
             <h3>
               {s.label} <span className="wave-name">{s.wave} wave</span>

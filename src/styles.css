@@ -325,10 +325,17 @@ main > section h2,
   justify-content: space-between;
   overflow: hidden;
 }
+/* The particle field is one fixed layer behind the whole page. */
 .field {
-  position: absolute;
-  inset: 26% 0 12%;
+  position: fixed;
+  inset: 0;
   z-index: 0;
+  pointer-events: none;
+}
+main,
+.contact {
+  position: relative;
+  z-index: 1;
 }
 .field canvas {
   display: block;
@@ -916,7 +923,7 @@ main > section h2,
 .contact {
   margin-top: clamp(100px, 14vw, 180px);
   padding-bottom: 32px;
-  background: var(--ink-deep);
+  background: linear-gradient(transparent, color-mix(in srgb, var(--ink-deep) 60%, transparent) 70%);
   border-top: 1px solid var(--line);
 }
 .contact-inner {
@@ -1216,9 +1223,6 @@ main > section h2,
   }
   .hero-head {
     flex-direction: column;
-  }
-  .field {
-    inset: 30% 0 30%;
   }
   .more li a {
     flex-direction: column;

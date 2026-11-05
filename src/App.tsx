@@ -3,6 +3,7 @@ import { Cursor } from "./components/Cursor";
 import { Marquee } from "./components/Marquee";
 import { Preloader } from "./components/Preloader";
 import { ScrollSignal } from "./components/ScrollSignal";
+import { SignalField } from "./components/SignalField";
 import { profile, type SignalKey } from "./data";
 import {
   decode,
@@ -40,6 +41,8 @@ export default function App() {
   const [quickLoader] = useState(hasVisited);
   const [ready, setReady] = useState(skipLoader);
   const [solo, setSolo] = useState<SignalKey | null>(null);
+  const [hovered, setHovered] = useState<SignalKey | null>(null);
+  const shown = hovered ?? solo;
   const bar = useRef<HTMLElement>(null);
   const cvBtn = useMagnetic<HTMLAnchorElement>();
 
@@ -105,6 +108,7 @@ export default function App() {
       {!skipLoader && <Preloader onReveal={reveal} quick={quickLoader} />}
       <Cursor />
       <ScrollSignal />
+      <SignalField solo={shown} ready={ready} />
 
       <a className="skip" href="#main">
         Skip to content
@@ -136,7 +140,7 @@ export default function App() {
       <main id="main">
         <Hero ready={ready} solo={solo} onSolo={setSolo} />
         <Marquee items={["Engineer", "Manager", "Designer"]} />
-        <Signals solo={solo} />
+        <Signals solo={shown} onHover={setHovered} />
         <Work />
         <Design />
         <Stats />
