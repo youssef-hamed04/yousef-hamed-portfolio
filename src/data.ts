@@ -34,7 +34,7 @@ export const signals: {
     key: "manager",
     label: "Manager",
     wave: "Square",
-    body: "Two years running Total Center's day-to-day: class schedules, logistics, instructor communication and revenue-share calculations. I now oversee operations at On Air Marketing Agency.",
+    body: "Two years running Total Center's day-to-day: class schedules, logistics, instructor communication and revenue-share calculations. After that I oversaw operations at On Air Marketing Agency.",
     tools: ["Operations", "Scheduling", "Team coordination", "Finance tracking"],
   },
   {
@@ -159,10 +159,16 @@ export const smallProjects = [
 
 export const timeline = [
   {
-    when: "Jul 2026 – now",
+    when: "Sep 2026 – now",
+    title: "Programming instructor",
+    where: "IC Robotics",
+    body: "Teach programming to children aged 4 to 17: Python, web development, UI/UX, WeDo 2.0, LEGO SPIKE, Canva, Scratch and PictoBlox.",
+  },
+  {
+    when: "Jul 2026 – Sep 2026",
     title: "Manager",
     where: "On Air Marketing Agency",
-    body: "Oversee agency operations and coordinate day-to-day management.",
+    body: "Oversaw agency operations and coordinated day-to-day management.",
   },
   {
     when: "2026",
@@ -183,7 +189,7 @@ export const timeline = [
     body: "Ran daily operations, schedules and logistics, spoke for the center to instructors, and calculated instructor commission and revenue share.",
   },
   {
-    when: "2023 – now",
+    when: "2023",
     title: "AI trainee",
     where: "Zewail City",
     body: "Python, machine learning, deep learning and reinforcement learning, plus time series, clustering, big data and AI ethics.",
