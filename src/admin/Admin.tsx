@@ -88,7 +88,8 @@ export default function Admin() {
     for (;;) {
       const { done, value } = await reader.read();
       if (done) break;
-      setLog((l) => l + decoder.decode(value));
+      // Drop terminal colour codes so the log reads as plain text.
+      setLog((l) => l + decoder.decode(value, { stream: true }).replace(/\x1b\[[0-9;]*m/g, ""));
     }
     setPublishing("done");
   };
