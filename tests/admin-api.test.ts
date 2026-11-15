@@ -2,12 +2,12 @@ import test, { after, before, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { createHash, createHmac } from "node:crypto";
 
-const PASSWORD = "test-password-123";
+const KEY = "test-key-0123456789abcdefghijklmnopqrstuv";
 const TOKEN = "test-token";
 const REPO = "test-owner/test-repo";
 const BRANCH = "main";
 
-process.env.ADMIN_PASSWORD = PASSWORD;
+process.env.ADMIN_KEY = KEY;
 process.env.GITHUB_TOKEN = TOKEN;
 process.env.GITHUB_REPO = REPO;
 process.env.GITHUB_BRANCH = BRANCH;
@@ -62,7 +62,7 @@ beforeEach(() => {
   responder = () => {
     throw new Error("Unexpected fetch call");
   };
-  process.env.ADMIN_PASSWORD = PASSWORD;
+  process.env.ADMIN_KEY = KEY;
   process.env.GITHUB_TOKEN = TOKEN;
 });
 
@@ -73,15 +73,15 @@ const req = (action: string, init: RequestInit = {}) =>
 
 const jsonHeaders = { "content-type": "application/json" };
 
-const sessionKey = (password = PASSWORD, token = TOKEN) =>
-  createHash("sha256").update(`yh-admin-session:${password}:${token}`).digest();
+const sessionKey = (adminKey = KEY, token = TOKEN) =>
+  createHash("sha256").update(`yh-admin-session:${adminKey}:${token}`).digest();
 
 function makeCookie(
-  opts: { expires?: number; password?: string; token?: string; signature?: string } = {}
+  opts: { expires?: number; key?: string; token?: string; signature?: string } = {}
 ): string {
   const expires = opts.expires ?? Math.floor(Date.now() / 1000) + 3600;
   const nonce = "test-nonce";
-  const key = sessionKey(opts.password, opts.token);
+  const key = sessionKey(opts.key, opts.token);
   const signature =
     opts.signature ?? createHmac("sha256", key).update(`${expires}.${nonce}`).digest("base64url");
   return `yh_admin=${expires}.${nonce}.${signature}`;
@@ -109,7 +109,7 @@ async function login(): Promise<string> {
     req("login", {
       method: "POST",
       headers: { ...jsonHeaders, "x-admin": "1" },
-      body: JSON.stringify({ password: PASSWORD }),
+      body: JSON.stringify({ key: KEY }),
     })
   );
   assert.equal(response.status, 200);
@@ -166,8 +166,8 @@ const pngBytes = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0,
 
 // ---- a. Configuration --------------------------------------------------------
 
-test("config: 503 when ADMIN_PASSWORD is missing", async () => {
-  delete process.env.ADMIN_PASSWORD;
+test("config: 503 when ADMIN_KEY is missing", async () => {
+  delete process.env.ADMIN_KEY;
   const response = await api.GET(req("session"));
   assert.equal(response.status, 503);
 });
@@ -178,8 +178,8 @@ test("config: 503 when GITHUB_TOKEN is missing", async () => {
   assert.equal(response.status, 503);
 });
 
-test("config: 503 when ADMIN_PASSWORD is shorter than 12 characters", async () => {
-  process.env.ADMIN_PASSWORD = "short";
+test("config: 503 when ADMIN_KEY is shorter than 32 characters", async () => {
+  process.env.ADMIN_KEY = "short";
   const response = await api.GET(req("session"));
   assert.equal(response.status, 503);
 });
@@ -188,7 +188,7 @@ test("config: 503 when ADMIN_PASSWORD is shorter than 12 characters", async () =
 
 test("login: missing x-admin header is forbidden", async () => {
   const response = await api.POST(
-    req("login", { method: "POST", headers: jsonHeaders, body: JSON.stringify({ password: PASSWORD }) })
+    req("login", { method: "POST", headers: jsonHeaders, body: JSON.stringify({ key: KEY }) })
   );
   assert.equal(response.status, 403);
 });
@@ -198,7 +198,7 @@ test("login: foreign Origin is forbidden", async () => {
     req("login", {
       method: "POST",
       headers: { ...jsonHeaders, "x-admin": "1", origin: "https://evil.test" },
-      body: JSON.stringify({ password: PASSWORD }),
+      body: JSON.stringify({ key: KEY }),
     })
   );
   assert.equal(response.status, 403);
@@ -209,31 +209,31 @@ test('login: Origin "null" is forbidden', async () => {
     req("login", {
       method: "POST",
       headers: { ...jsonHeaders, "x-admin": "1", origin: "null" },
-      body: JSON.stringify({ password: PASSWORD }),
+      body: JSON.stringify({ key: KEY }),
     })
   );
   assert.equal(response.status, 403);
 });
 
-test("login: wrong password is rejected after the slowdown", async () => {
+test("login: wrong key is rejected after the slowdown", async () => {
   const started = Date.now();
   const response = await api.POST(
     req("login", {
       method: "POST",
       headers: { ...jsonHeaders, "x-admin": "1" },
-      body: JSON.stringify({ password: "definitely-wrong" }),
+      body: JSON.stringify({ key: "definitely-wrong" }),
     })
   );
   assert.equal(response.status, 401);
-  assert.ok(Date.now() - started >= 900, "wrong passwords should be slowed down");
+  assert.ok(Date.now() - started >= 900, "wrong keys should be slowed down");
 });
 
-test("login: right password sets a hardened session cookie", async () => {
+test("login: right key sets a hardened session cookie", async () => {
   const response = await api.POST(
     req("login", {
       method: "POST",
       headers: { ...jsonHeaders, "x-admin": "1" },
-      body: JSON.stringify({ password: PASSWORD }),
+      body: JSON.stringify({ key: KEY }),
     })
   );
   assert.equal(response.status, 200);
@@ -243,7 +243,7 @@ test("login: right password sets a hardened session cookie", async () => {
   assert.match(setCookie, /HttpOnly/);
   assert.match(setCookie, /Secure/);
   assert.match(setCookie, /SameSite=Strict/);
-  assert.match(setCookie, /Max-Age=43200/);
+  assert.match(setCookie, /Max-Age=2592000/);
 });
 
 test("login: same-origin Origin is allowed", async () => {
@@ -251,7 +251,7 @@ test("login: same-origin Origin is allowed", async () => {
     req("login", {
       method: "POST",
       headers: { ...jsonHeaders, "x-admin": "1", origin: "https://site.test" },
-      body: JSON.stringify({ password: PASSWORD }),
+      body: JSON.stringify({ key: KEY }),
     })
   );
   assert.equal(response.status, 200);
@@ -286,8 +286,8 @@ test("session: expired but correctly signed cookie is unauthorized", async () =>
   assert.equal(response.status, 401);
 });
 
-test("session: cookie signed with a different password is unauthorized", async () => {
-  const cookie = makeCookie({ password: "another-password-123" });
+test("session: cookie signed with a different key is unauthorized", async () => {
+  const cookie = makeCookie({ key: "another-key-0123456789abcdefghijklmn" });
   const response = await api.GET(req("session", { headers: { cookie } }));
   assert.equal(response.status, 401);
 });

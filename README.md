@@ -17,7 +17,9 @@ All the content is stored in [`src/content.json`](src/content.json). There are t
 
 ### Online, from any device
 
-Go to https://yousef-hamed-portfolio.vercel.app/admin and sign in with your password. Edit, upload screenshots, then press **Publish**. Your changes are saved to GitHub, and Vercel updates the live site by itself in about a minute.
+Open your private dashboard link (it looks like `https://yousef-hamed-portfolio.vercel.app/admin#…`). It signs you in for 30 days, so after that first visit `/admin` on its own works on that browser. Edit, upload screenshots, then press **Publish**. Your changes are saved to GitHub, and Vercel updates the live site by itself in about a minute.
+
+Anyone with the private link can edit the site, so keep it to yourself.
 
 ### On this computer
 
@@ -34,22 +36,23 @@ If you've published from the online dashboard, run `git pull` before editing loc
 
 ## Set up the online dashboard (once)
 
-The online dashboard needs two secrets in Vercel. Never put them in the code.
+The online dashboard needs two secrets in Vercel: `ADMIN_KEY` (the random key in your private link) and `GITHUB_TOKEN`. Never put them in the code.
 
-1. **Choose a password** of at least 12 characters.
-2. **Create a GitHub key** at https://github.com/settings/personal-access-tokens/new:
+1. **Create a GitHub key** at https://github.com/settings/personal-access-tokens/new:
    - Repository access: **Only select repositories**, then pick `yousef-hamed-portfolio`.
    - Permissions: **Contents: Read and write**. Leave everything else as it is.
    - Pick an expiry date, then generate it and copy the key.
-3. **Add both to Vercel**: open the project in Vercel, go to **Settings → Environment Variables**, and add:
-   - `ADMIN_PASSWORD`: your password
-   - `GITHUB_TOKEN`: the GitHub key
+2. **Run the setup**:
 
-   Then redeploy (Deployments → the latest one → **Redeploy**).
+   ```bash
+   npm run dashboard:setup
+   ```
+
+   Paste the GitHub key when it asks (nothing shows while you paste). It makes a new private link, saves both secrets in Vercel, republishes, copies the link to your clipboard, and opens the dashboard signed in.
 
 The Vercel project must be connected to this GitHub repository (**Settings → Git**) so that each publish deploys automatically.
 
-To change the password or replace an expired key, update the variable in Vercel and redeploy. Everyone is signed out when either one changes.
+**If the link leaks**, run `npm run dashboard:setup` again: it makes a new link and the old one stops working. Run it again too when the GitHub key expires, and paste the new key.
 
 ## Tests
 
