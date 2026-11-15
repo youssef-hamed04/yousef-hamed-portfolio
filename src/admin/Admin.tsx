@@ -45,7 +45,6 @@ export default function Admin() {
   const [sha, setSha] = useState("");
   const [rawBase, setRawBase] = useState("");
   const [session, setSession] = useState<"loading" | "signed-in" | "signed-out" | "unavailable">(ONLINE ? "loading" : "signed-in");
-  const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState("");
   const [authBusy, setAuthBusy] = useState(false);
   const [active, setActive] = useState(sections[0].id);
@@ -85,14 +84,21 @@ export default function Admin() {
     if (ONLINE) {
       const expired = () => {
         setSession("signed-out");
-        setPassword("");
         setPublishing("idle");
       };
       window.addEventListener("admin-session-expired", expired);
-      loadOnline().catch((error) => {
-        setAuthError(error.message);
-        setSession("unavailable");
-      });
+      // The private link is /admin#<key>. Read the key once, then take it out of
+      // the address bar and history so it isn't left on screen.
+      const linkKey = window.location.hash.slice(1);
+      if (linkKey) {
+        history.replaceState(null, "", window.location.pathname + window.location.search);
+        signIn(linkKey);
+      } else {
+        loadOnline().catch((error) => {
+          setAuthError(error.message);
+          setSession("unavailable");
+        });
+      }
       return () => window.removeEventListener("admin-session-expired", expired);
     }
     api("/content")
@@ -104,22 +110,21 @@ export default function Admin() {
       .catch(() => setStatus({ tone: "error", text: "Couldn't load the content. Is the dev server running?" }));
   }, []);
 
-  const signIn = async () => {
+  const signIn = async (linkKey: string) => {
     setAuthBusy(true);
     setAuthError("");
     try {
       const r = await api("/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ key: linkKey }),
       });
       const body = await r.json();
       if (!r.ok) {
         setAuthError(body.error);
-        if (r.status === 503) setSession("unavailable");
+        setSession(r.status === 503 ? "unavailable" : "signed-out");
         return;
       }
-      setPassword("");
       await loadOnline();
     } catch (error) {
       setAuthError(error instanceof Error ? error.message : "Couldn't sign in.");
@@ -134,7 +139,6 @@ export default function Admin() {
       const r = await api("/logout", { method: "POST" });
       if (!r.ok) throw new Error((await r.json()).error);
       setAuthError("");
-      setPassword("");
       setPublishing("idle");
       setSession("signed-out");
     } catch (error) {
@@ -211,21 +215,19 @@ export default function Admin() {
   if (ONLINE && session !== "signed-in") {
     return (
       <div className="adm-signin">
-        <form className="adm-signin-card" onSubmit={(e) => { e.preventDefault(); if (!authBusy) signIn(); }}>
+        <div className="adm-signin-card">
           <p className="adm-brand">YH <span>dashboard</span></p>
-          {session === "loading" ? <p>Loading…</p> : session === "unavailable" ? (
+          {session === "loading" ? (
+            <p>Loading…</p>
+          ) : session === "unavailable" ? (
             <p className="adm-error" role="alert">{authError}</p>
           ) : (
             <>
-              <div className="adm-field">
-                <label htmlFor="password">Password</label>
-                <input id="password" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
-              </div>
-              <button className="adm-btn adm-btn-gold" disabled={authBusy}>Sign in</button>
+              <p>Open the dashboard with your private link.</p>
               {authError && <p className="adm-error" role="alert">{authError}</p>}
             </>
           )}
-        </form>
+        </div>
       </div>
     );
   }

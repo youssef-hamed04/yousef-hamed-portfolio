@@ -1,6 +1,6 @@
 // Online dashboard API, deployed as one Vercel Function at /api/admin/<action>.
 //
-//   POST /api/admin/login     { password }        sets a signed, HttpOnly session cookie
+//   POST /api/admin/login     { key }             sets a signed, HttpOnly session cookie
 //   POST /api/admin/logout                        clears it
 //   GET  /api/admin/session                       200 if signed in, else 401
 //   GET  /api/admin/content                       { content, sha } from GitHub
@@ -8,16 +8,18 @@
 //   POST /api/admin/upload?name=<file>  <bytes>   commits public/work/uploads/<file>
 //
 // Saving commits to GitHub, and Vercel's Git integration redeploys the site.
-// Needs two environment variables in Vercel: ADMIN_PASSWORD and GITHUB_TOKEN
-// (fine-grained, this repository only, Contents: read and write).
+// Needs two environment variables in Vercel: ADMIN_KEY, the random secret in the
+// private dashboard link (/admin#<key>), and GITHUB_TOKEN (fine-grained, this
+// repository only, Contents: read and write).
 import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 
 const REPO = process.env.GITHUB_REPO || "youssef-hamed04/yousef-hamed-portfolio";
 const BRANCH = process.env.GITHUB_BRANCH || "main";
 const CONTENT_PATH = "src/content.json";
 const COOKIE = "yh_admin";
-const SESSION_SECONDS = 12 * 60 * 60;
-const MIN_PASSWORD = 12;
+const SESSION_SECONDS = 30 * 24 * 60 * 60;
+// The link key is generated, not chosen, so it can be long enough that guessing is hopeless.
+const MIN_KEY = 32;
 const MAX_CONTENT = 1024 * 1024;
 // Vercel caps request bodies at 4.5 MB.
 const MAX_UPLOAD = 4 * 1024 * 1024;
@@ -54,17 +56,17 @@ const json = (body: unknown, status = 200, headers: Record<string, string> = {})
 const sha256 = (text: string) => createHash("sha256").update(text).digest();
 
 function config() {
-  const password = process.env.ADMIN_PASSWORD || "";
+  const adminKey = process.env.ADMIN_KEY || "";
   const token = process.env.GITHUB_TOKEN || "";
-  if (!password || !token) {
-    throw new HttpError(503, "The dashboard isn't set up yet. Add ADMIN_PASSWORD and GITHUB_TOKEN in Vercel, then redeploy.");
+  if (!adminKey || !token) {
+    throw new HttpError(503, "The dashboard isn't set up yet. Add ADMIN_KEY and GITHUB_TOKEN in Vercel, then redeploy.");
   }
-  if (password.length < MIN_PASSWORD) {
-    throw new HttpError(503, `ADMIN_PASSWORD must be at least ${MIN_PASSWORD} characters.`);
+  if (adminKey.length < MIN_KEY) {
+    throw new HttpError(503, `ADMIN_KEY must be at least ${MIN_KEY} characters.`);
   }
-  // Sessions are signed with a key derived from both secrets, so changing
-  // either one signs everybody out.
-  return { password, token, key: sha256(`yh-admin-session:${password}:${token}`) };
+  // Sessions are signed with a key derived from both secrets, so a new link
+  // (or a new GitHub key) signs everybody out.
+  return { adminKey, token, key: sha256(`yh-admin-session:${adminKey}:${token}`) };
 }
 
 // ---- Sessions ----------------------------------------------------------------
@@ -211,16 +213,16 @@ const action = (request: Request) => new URL(request.url).pathname.split("/").fi
 
 async function handle(request: Request): Promise<Response> {
   const route = `${request.method} ${action(request)}`;
-  const { password, token, key } = config();
+  const { adminKey, token, key } = config();
 
   if (route === "POST login") {
     checkSameOrigin(request);
-    const body = (await request.json().catch(() => ({}))) as { password?: unknown };
-    const given = typeof body.password === "string" ? body.password : "";
-    if (!timingSafeEqual(sha256(given), sha256(password))) {
+    const body = (await request.json().catch(() => ({}))) as { key?: unknown };
+    const given = typeof body.key === "string" ? body.key : "";
+    if (!timingSafeEqual(sha256(given), sha256(adminKey))) {
       // Slow down guessing; each wrong try costs the guesser a second.
       await new Promise((r) => setTimeout(r, 1000));
-      throw new HttpError(401, "Wrong password.");
+      throw new HttpError(401, "This link isn't valid. Open the newest link from the setup tool.");
     }
     return json({ ok: true }, 200, { "Set-Cookie": sessionCookie(key) });
   }
