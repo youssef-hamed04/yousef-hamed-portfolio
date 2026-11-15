@@ -40,6 +40,30 @@ textarea {
   color: var(--muted);
 }
 
+.adm-signin {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: 24px;
+}
+.adm-signin-card {
+  display: grid;
+  gap: 20px;
+  width: 100%;
+  max-width: 360px;
+  padding: 28px;
+  background: var(--ink-deep);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+}
+.adm-signin-card .adm-brand {
+  margin: 0;
+}
+.adm-signin-card .adm-btn,
+.adm-signout {
+  justify-content: center;
+}
+
 .adm {
   display: grid;
   grid-template-columns: 220px 1fr;

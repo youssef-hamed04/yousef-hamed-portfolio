@@ -1,10 +1,19 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+/// <reference types="vite/client" />
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { sections, type Field, type Section } from "./schema";
 
 type Json = any;
 
-const api = (path: string, init: RequestInit = {}) =>
-  fetch(`/__admin${path}`, { ...init, headers: { ...(init.headers || {}), "x-admin": "1" } });
+const ONLINE = !import.meta.env.DEV;
+const RawBaseContext = createContext("");
+
+const api = async (path: string, init: RequestInit = {}) => {
+  const headers = new Headers(init.headers);
+  headers.set("x-admin", "1");
+  const response = await fetch(`${ONLINE ? "/api/admin" : "/__admin"}${path}`, { ...init, headers });
+  if (ONLINE && response.status === 401) window.dispatchEvent(new Event("admin-session-expired"));
+  return response;
+};
 
 const getPath = (obj: Json, path: string) => path.split(".").reduce((o, k) => o?.[k], obj);
 
@@ -33,6 +42,12 @@ const move = <T,>(list: T[], from: number, to: number) => {
 export default function Admin() {
   const [content, setContent] = useState<Json>(null);
   const [saved, setSaved] = useState<Json>(null);
+  const [sha, setSha] = useState("");
+  const [rawBase, setRawBase] = useState("");
+  const [session, setSession] = useState<"loading" | "signed-in" | "signed-out" | "unavailable">(ONLINE ? "loading" : "signed-in");
+  const [password, setPassword] = useState("");
+  const [authError, setAuthError] = useState("");
+  const [authBusy, setAuthBusy] = useState(false);
   const [active, setActive] = useState(sections[0].id);
   const [status, setStatus] = useState<{ tone: "ok" | "error" | "busy"; text: string } | null>(null);
   const [publishing, setPublishing] = useState<"idle" | "confirm" | "running" | "done">("idle");
@@ -42,7 +57,44 @@ export default function Admin() {
   const dirty = useMemo(() => content && JSON.stringify(content) !== JSON.stringify(saved), [content, saved]);
   const section = sections.find((s) => s.id === active)!;
 
+  const loadOnline = async () => {
+    const r = await api("/session");
+    const body = await r.json();
+    if (!r.ok) {
+      setAuthError(body.error);
+      setSession(r.status === 401 ? "signed-out" : "unavailable");
+      return;
+    }
+    setRawBase(body.rawBase);
+    if (!content) {
+      const response = await api("/content");
+      const data = await response.json();
+      if (!response.ok) {
+        if (response.status !== 401) setSession("unavailable");
+        setAuthError(data.error);
+        return;
+      }
+      setContent(data.content);
+      setSaved(data.content);
+      setSha(data.sha);
+    }
+    setSession("signed-in");
+  };
+
   useEffect(() => {
+    if (ONLINE) {
+      const expired = () => {
+        setSession("signed-out");
+        setPassword("");
+        setPublishing("idle");
+      };
+      window.addEventListener("admin-session-expired", expired);
+      loadOnline().catch((error) => {
+        setAuthError(error.message);
+        setSession("unavailable");
+      });
+      return () => window.removeEventListener("admin-session-expired", expired);
+    }
     api("/content")
       .then((r) => r.json())
       .then((c) => {
@@ -51,6 +103,46 @@ export default function Admin() {
       })
       .catch(() => setStatus({ tone: "error", text: "Couldn't load the content. Is the dev server running?" }));
   }, []);
+
+  const signIn = async () => {
+    setAuthBusy(true);
+    setAuthError("");
+    try {
+      const r = await api("/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+      });
+      const body = await r.json();
+      if (!r.ok) {
+        setAuthError(body.error);
+        if (r.status === 503) setSession("unavailable");
+        return;
+      }
+      setPassword("");
+      await loadOnline();
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : "Couldn't sign in.");
+    } finally {
+      setAuthBusy(false);
+    }
+  };
+
+  const signOut = async () => {
+    setAuthBusy(true);
+    try {
+      const r = await api("/logout", { method: "POST" });
+      if (!r.ok) throw new Error((await r.json()).error);
+      setAuthError("");
+      setPassword("");
+      setPublishing("idle");
+      setSession("signed-out");
+    } catch (error) {
+      setStatus({ tone: "error", text: error instanceof Error ? error.message : "Couldn't sign out." });
+    } finally {
+      setAuthBusy(false);
+    }
+  };
 
   // Warn before closing the tab with unsaved changes.
   useEffect(() => {
@@ -79,6 +171,28 @@ export default function Admin() {
   };
 
   const publish = async () => {
+    if (ONLINE) {
+      if (!dirty || publishing === "running") return;
+      setPublishing("running");
+      setStatus({ tone: "busy", text: "Publishing…" });
+      try {
+        const r = await api("/content", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ content, sha }),
+        });
+        const body = await r.json();
+        if (!r.ok) throw new Error(body.error);
+        setSha(body.sha);
+        setSaved(content);
+        setStatus({ tone: "ok", text: "Published. The live site updates in about a minute." });
+      } catch (error) {
+        setStatus({ tone: "error", text: `Not published: ${error instanceof Error ? error.message : "Request failed."}` });
+      } finally {
+        setPublishing("idle");
+      }
+      return;
+    }
     if (dirty && !(await save())) return;
     setPublishing("running");
     setLog("");
@@ -93,6 +207,28 @@ export default function Admin() {
     }
     setPublishing("done");
   };
+
+  if (ONLINE && session !== "signed-in") {
+    return (
+      <div className="adm-signin">
+        <form className="adm-signin-card" onSubmit={(e) => { e.preventDefault(); if (!authBusy) signIn(); }}>
+          <p className="adm-brand">YH <span>dashboard</span></p>
+          {session === "loading" ? <p>Loading…</p> : session === "unavailable" ? (
+            <p className="adm-error" role="alert">{authError}</p>
+          ) : (
+            <>
+              <div className="adm-field">
+                <label htmlFor="password">Password</label>
+                <input id="password" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+              </div>
+              <button className="adm-btn adm-btn-gold" disabled={authBusy}>Sign in</button>
+              {authError && <p className="adm-error" role="alert">{authError}</p>}
+            </>
+          )}
+        </form>
+      </div>
+    );
+  }
 
   if (!content) {
     return <div className="adm-loading">{status?.text ?? "Loading content…"}</div>;
@@ -115,8 +251,9 @@ export default function Admin() {
           ))}
         </nav>
         <a className="adm-preview" href="/" target="_blank" rel="noreferrer">
-          Open preview
+          {ONLINE ? "Open live site" : "Open preview"}
         </a>
+        {ONLINE && <button className="adm-btn adm-signout" onClick={signOut} disabled={authBusy || publishing === "running"}>Sign out</button>}
       </aside>
 
       <main className="adm-main">
@@ -128,10 +265,10 @@ export default function Admin() {
           <div className="adm-actions">
             {status && <span className={`adm-status is-${status.tone}`}>{status.text}</span>}
             {dirty && <span className="adm-dirty">Unsaved changes</span>}
-            <button className="adm-btn" onClick={save} disabled={!dirty}>
+            {!ONLINE && <button className="adm-btn" onClick={save} disabled={!dirty}>
               Save
-            </button>
-            <button className="adm-btn adm-btn-gold" onClick={() => setPublishing("confirm")} disabled={publishing === "running"}>
+            </button>}
+            <button className="adm-btn adm-btn-gold" onClick={() => setPublishing("confirm")} disabled={publishing === "running" || (ONLINE && !dirty)}>
               Publish
             </button>
           </div>
@@ -142,8 +279,10 @@ export default function Admin() {
             {publishing === "confirm" ? (
               <>
                 <p>
-                  Publish {dirty ? "saves your changes, " : ""}rebuilds the site, uploads it to Vercel, and pushes the changes to
-                  GitHub. It takes about a minute.
+                  {ONLINE ? "Publish saves your changes to GitHub. The live site updates by itself in about a minute." : <>
+                    Publish {dirty ? "saves your changes, " : ""}checks the site builds, and pushes the changes to GitHub. Vercel
+                    then updates the live site in about a minute.
+                  </>}
                 </p>
                 <div className="adm-row">
                   <button className="adm-btn adm-btn-gold" onClick={publish}>
@@ -157,7 +296,7 @@ export default function Admin() {
             ) : (
               <>
                 <p>{publishing === "running" ? "Publishing…" : "Finished. Read the last line to check it worked."}</p>
-                <pre ref={logRef}>{log}</pre>
+                {!ONLINE && <pre ref={logRef}>{log}</pre>}
                 {publishing === "done" && (
                   <button className="adm-btn" onClick={() => setPublishing("idle")}>
                     Close
@@ -168,7 +307,9 @@ export default function Admin() {
           </div>
         )}
 
-        <SectionEditor section={section} value={value} onChange={update} />
+        <RawBaseContext.Provider value={rawBase}>
+          <SectionEditor section={section} value={value} onChange={update} />
+        </RawBaseContext.Provider>
       </main>
     </div>
   );
@@ -361,30 +502,67 @@ function TagsInput({ id, value, onChange }: { id: string; value: string[]; onCha
   );
 }
 
+async function prepareUpload(file: File) {
+  if (["image/jpeg", "image/png", "image/webp"].includes(file.type) && file.size > 3.5 * 1024 * 1024) {
+    const image = await createImageBitmap(file);
+    try {
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.min(2000, image.width);
+      canvas.height = Math.max(1, Math.round(image.height * canvas.width / image.width));
+      const context = canvas.getContext("2d");
+      if (!context) throw new Error("Couldn't resize the image.");
+      context.fillStyle = "#fff";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob((result) => result ? resolve(result) : reject(new Error("Couldn't resize the image.")), "image/jpeg", 0.85);
+      });
+      file = new File([blob], `${file.name.replace(/\.[^.]+$/, "")}.jpg`, { type: "image/jpeg" });
+    } finally {
+      image.close();
+    }
+  }
+  if (file.size > 4 * 1024 * 1024) throw new Error("That file is over 4 MB. Make it smaller and try again.");
+  return file;
+}
+
 function ImageInput({ id, value, onChange }: { id: string; value: string; onChange: (v: string) => void }) {
+  const rawBase = useContext(RawBaseContext);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
   const upload = async (file: File) => {
     setBusy(true);
     setError("");
-    const r = await api(`/upload?name=${encodeURIComponent(file.name)}`, { method: "POST", body: file });
-    const body = await r.json();
-    setBusy(false);
-    if (r.ok) onChange(body.path);
-    else setError(body.error);
+    try {
+      if (ONLINE) file = await prepareUpload(file);
+      const r = await api(`/upload?name=${encodeURIComponent(file.name)}`, { method: "POST", body: file });
+      const body = await r.json();
+      if (r.ok) onChange(body.path);
+      else setError(body.error);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Couldn't upload the file.");
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
     <div className="adm-image">
-      {value && !value.endsWith(".pdf") && <img src={value} alt="" />}
+      {value && !value.endsWith(".pdf") && <img key={`${rawBase}:${value}`} src={value} alt="" onError={(e) => {
+        const image = e.currentTarget;
+        if (ONLINE && rawBase && value.startsWith("/") && !value.startsWith("//") && !image.dataset.fallback) {
+          image.dataset.fallback = "true";
+          image.src = rawBase + value;
+        }
+      }} />}
       <div className="adm-image-controls">
         <input id={id} value={value} onChange={(e) => onChange(e.target.value)} placeholder="/work/…" />
         <label className="adm-btn adm-upload">
           {busy ? "Uploading…" : "Upload file"}
           <input
             type="file"
-            accept="image/*,.pdf"
+            accept={ONLINE ? ".jpg,.jpeg,.png,.webp,.gif,.pdf" : "image/*,.pdf"}
             hidden
             onChange={(e) => {
               const file = e.target.files?.[0];

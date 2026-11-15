@@ -86,11 +86,13 @@ export function contentAdmin(): Plugin {
           if (req.url === "/publish" && req.method === "POST") {
             res.statusCode = 200;
             res.setHeader("Content-Type", "text/plain; charset=utf-8");
+            // The build is a check; Vercel deploys from GitHub once the push lands.
+            // Pulling first picks up anything published from the online dashboard.
             const steps = [
               "npm run build",
-              "npx --yes vercel@latest deploy --prod --yes",
               "git add -A",
               'git diff --cached --quiet || git commit -m "Update content from the dashboard"',
+              "git pull --rebase",
               "git push",
             ];
             for (const step of steps) {
@@ -100,7 +102,7 @@ export function contentAdmin(): Plugin {
                 return;
               }
             }
-            res.end("\nDone: the live site is updated and the changes are on GitHub.\n");
+            res.end("\nDone: the changes are on GitHub. Vercel updates the live site in about a minute.\n");
             return;
           }
 
