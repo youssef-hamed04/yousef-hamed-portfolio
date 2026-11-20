@@ -19,7 +19,14 @@ export type Profile = {
 
 export type Signal = { key: SignalKey; label: string; wave: string; body: string; tools: string[] };
 
-export type FeaturedPart = { name: string; stack: string; body: string; href?: string };
+export type FeaturedPart = {
+  name: string;
+  stack: string;
+  body: string;
+  href?: string;
+  // Extra links shown under the description, such as app store pages.
+  links?: { label: string; href: string }[];
+};
 
 export type Featured = {
   title: string;

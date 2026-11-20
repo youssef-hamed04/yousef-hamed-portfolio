@@ -76,6 +76,18 @@ export const sections: Section[] = [
           { key: "stack", label: "Tools", type: "text" },
           { key: "body", label: "Description", type: "textarea" },
           { key: "href", label: "Link", type: "url", hint: "Leave empty for no link" },
+          {
+            key: "links",
+            label: "Extra links",
+            type: "list",
+            noun: "link",
+            titleKey: "label",
+            hint: "Shown under the description, e.g. App Store and Google Play",
+            item: [
+              { key: "label", label: "Label", type: "text" },
+              { key: "href", label: "Link", type: "url" },
+            ],
+          },
         ],
       },
     ],

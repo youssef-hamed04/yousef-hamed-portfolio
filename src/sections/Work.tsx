@@ -136,6 +136,15 @@ export function Work() {
                     </h4>
                     <p className="stack">{p.stack}</p>
                     <p>{p.body}</p>
+                    {p.links && p.links.length > 0 && (
+                      <p className="links">
+                        {p.links.map((l) => (
+                          <a key={l.href} href={l.href} target="_blank" rel="noreferrer">
+                            {l.label}
+                          </a>
+                        ))}
+                      </p>
+                    )}
                   </li>
                 ))}
               </ul>

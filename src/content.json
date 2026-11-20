@@ -62,10 +62,19 @@
     "summary": "A university learning platform built as three clients on one NestJS API: a student mobile app, a student web app and a staff dashboard.",
     "parts": [
       {
-        "name": "Student Center app on Google Play",
+        "name": "Student Center mobile app",
         "stack": "Expo, React Native, TypeScript",
         "body": "Light and dark themes, full English and Arabic with real RTL, HLS video through short-lived playback tickets, and a custom native module that blocks screen capture on Android and iOS.",
-        "href": "https://play.google.com/store/apps/details?id=com.studentcenter.app"
+        "links": [
+          {
+            "label": "App Store",
+            "href": "https://apps.apple.com/us/app/student-center-lms/id6834581052"
+          },
+          {
+            "label": "Google Play",
+            "href": "https://play.google.com/store/apps/details?id=com.studentcenter.app"
+          }
+        ]
       },
       {
         "name": "Student web app",
@@ -81,6 +90,21 @@
     ]
   },
   "projects": [
+    {
+      "title": "Kashkool",
+      "kind": "Attendance and fees app for teachers",
+      "body": "An Arabic web app for teachers. They take attendance by scanning each student's QR card with the phone camera, track monthly fees with partial payments, record exam grades, and prepare messages to parents that they send from their own WhatsApp. Attendance keeps working offline, assistants can take attendance and payments, and student lists move in and out as Excel sheets.",
+      "stack": [
+        "Next.js",
+        "React",
+        "TypeScript",
+        "PostgreSQL",
+        "Drizzle ORM",
+        "zod"
+      ],
+      "image": "/work/kashkool.jpg",
+      "url": "kashkool / teacher app"
+    },
     {
       "title": "Cartify",
       "kind": "Graduation project",

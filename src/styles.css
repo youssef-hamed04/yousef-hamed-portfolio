@@ -652,7 +652,7 @@ main,
   color: var(--signal);
   margin: 2px 0 4px;
 }
-.parts li > p:last-child {
+.parts li > p:not(.stack):not(.links) {
   font-size: 0.92rem;
   color: var(--muted);
   max-width: 56ch;
