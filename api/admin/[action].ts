@@ -6,7 +6,7 @@
 //   GET  /api/admin/content                       { content, sha } from GitHub
 //   PUT  /api/admin/content   { content, sha }    commits src/content.json, returns { sha, commit }
 //   POST /api/admin/upload?name=<file>  <bytes>   commits public/work/uploads/<file>
-//   GET  /api/admin/status?commit=<sha>           { state } of Vercel's deploy for that commit
+//   GET  /api/admin/status?commit=<sha>           { state, url? } of Vercel's deploy for that commit
 //
 // Saving commits to GitHub, and Vercel's Git integration redeploys the site.
 // Needs two environment variables in Vercel: ADMIN_KEY, the random secret in the
@@ -166,15 +166,23 @@ async function deployState(token: string, commit: string) {
   try {
     response = await github(token, `commits/${commit}/status`);
   } catch {
-    return "unknown";
+    return { state: "unknown" };
   }
-  if (!response.ok) return "unknown";
-  const body = (await response.json()) as { statuses?: { context?: string; state?: string }[] };
+  if (!response.ok) return { state: "unknown" };
+  const body = (await response.json()) as { statuses?: { context?: string; state?: string; target_url?: string }[] };
   const vercel = body.statuses?.find((s) => s.context?.startsWith("Vercel"));
-  if (!vercel) return "pending";
-  if (vercel.state === "success") return "success";
-  if (vercel.state === "failure" || vercel.state === "error") return "failure";
-  return "pending";
+  if (!vercel) return { state: "pending" };
+  // The deploy's page on Vercel, passed on only if it really is a Vercel address.
+  let url: string | undefined;
+  try {
+    const target = new URL(vercel.target_url || "");
+    if (target.protocol === "https:" && target.hostname === "vercel.com") url = target.href;
+  } catch {
+    // No usable link.
+  }
+  if (vercel.state === "success") return { state: "success", url };
+  if (vercel.state === "failure" || vercel.state === "error") return { state: "failure", url };
+  return { state: "pending", url };
 }
 
 // ---- Validation --------------------------------------------------------------
@@ -276,7 +284,7 @@ async function handle(request: Request): Promise<Response> {
   if (route === "GET status") {
     const commit = new URL(request.url).searchParams.get("commit") || "";
     if (!/^[0-9a-f]{40}$/.test(commit)) throw new HttpError(400, "Missing or invalid commit.");
-    return json({ state: await deployState(token, commit) });
+    return json(await deployState(token, commit));
   }
 
   if (route === "POST upload") {
