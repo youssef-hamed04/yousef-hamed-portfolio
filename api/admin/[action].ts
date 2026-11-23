@@ -4,8 +4,9 @@
 //   POST /api/admin/logout                        clears it
 //   GET  /api/admin/session                       200 if signed in, else 401
 //   GET  /api/admin/content                       { content, sha } from GitHub
-//   PUT  /api/admin/content   { content, sha }    commits src/content.json
+//   PUT  /api/admin/content   { content, sha }    commits src/content.json, returns { sha, commit }
 //   POST /api/admin/upload?name=<file>  <bytes>   commits public/work/uploads/<file>
+//   GET  /api/admin/status?commit=<sha>           { state } of Vercel's deploy for that commit
 //
 // Saving commits to GitHub, and Vercel's Git integration redeploys the site.
 // Needs two environment variables in Vercel: ADMIN_KEY, the random secret in the
@@ -116,8 +117,9 @@ function checkSameOrigin(request: Request) {
 
 // ---- GitHub ------------------------------------------------------------------
 
+// `path` is relative to the repository, e.g. "contents/src/content.json".
 async function github(token: string, path: string, init: RequestInit = {}) {
-  const response = await fetch(`https://api.github.com/repos/${REPO}/contents/${path}`, {
+  const response = await fetch(`https://api.github.com/repos/${REPO}/${path}`, {
     ...init,
     headers: {
       Authorization: `Bearer ${token}`,
@@ -134,14 +136,14 @@ async function github(token: string, path: string, init: RequestInit = {}) {
 }
 
 async function readContent(token: string) {
-  const response = await github(token, `${CONTENT_PATH}?ref=${encodeURIComponent(BRANCH)}`);
+  const response = await github(token, `contents/${CONTENT_PATH}?ref=${encodeURIComponent(BRANCH)}`);
   if (!response.ok) throw new HttpError(502, `Couldn't read the content from GitHub (${response.status}).`);
   const file = (await response.json()) as { content: string; sha: string };
   return { content: JSON.parse(Buffer.from(file.content, "base64").toString("utf8")), sha: file.sha };
 }
 
 async function commitFile(token: string, path: string, bytes: Buffer, message: string, sha?: string) {
-  const response = await github(token, path, {
+  const response = await github(token, `contents/${path}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ message, content: bytes.toString("base64"), branch: BRANCH, ...(sha ? { sha } : {}) }),
@@ -153,8 +155,26 @@ async function commitFile(token: string, path: string, bytes: Buffer, message: s
     );
   }
   if (!response.ok) throw new HttpError(502, `GitHub didn't accept the change (${response.status}).`);
-  const body = (await response.json()) as { content?: { sha?: string } };
-  return body.content?.sha;
+  const body = (await response.json()) as { content?: { sha?: string }; commit?: { sha?: string } };
+  return { sha: body.content?.sha, commit: body.commit?.sha };
+}
+
+// Vercel reports each deploy on its commit as a GitHub status named "Vercel".
+// No status yet means Vercel hasn't picked the commit up, which reads as pending.
+async function deployState(token: string, commit: string) {
+  let response: Response;
+  try {
+    response = await github(token, `commits/${commit}/status`);
+  } catch {
+    return "unknown";
+  }
+  if (!response.ok) return "unknown";
+  const body = (await response.json()) as { statuses?: { context?: string; state?: string }[] };
+  const vercel = body.statuses?.find((s) => s.context?.startsWith("Vercel"));
+  if (!vercel) return "pending";
+  if (vercel.state === "success") return "success";
+  if (vercel.state === "failure" || vercel.state === "error") return "failure";
+  return "pending";
 }
 
 // ---- Validation --------------------------------------------------------------
@@ -249,8 +269,14 @@ async function handle(request: Request): Promise<Response> {
     if (typeof body.sha !== "string") throw new HttpError(400, "Missing version. Reload the dashboard.");
     checkContent(body.content);
     const bytes = Buffer.from(JSON.stringify(body.content, null, 2) + "\n", "utf8");
-    const sha = await commitFile(token, CONTENT_PATH, bytes, "Update content from the online dashboard", body.sha);
-    return json({ ok: true, sha });
+    const saved = await commitFile(token, CONTENT_PATH, bytes, "Update content from the online dashboard", body.sha);
+    return json({ ok: true, ...saved });
+  }
+
+  if (route === "GET status") {
+    const commit = new URL(request.url).searchParams.get("commit") || "";
+    if (!/^[0-9a-f]{40}$/.test(commit)) throw new HttpError(400, "Missing or invalid commit.");
+    return json({ state: await deployState(token, commit) });
   }
 
   if (route === "POST upload") {
