@@ -6,6 +6,7 @@ const KEY = "test-key-0123456789abcdefghijklmnopqrstuv";
 const TOKEN = "test-token";
 const REPO = "test-owner/test-repo";
 const BRANCH = "main";
+const COMMIT_SHA = "0123456789abcdef0123456789abcdef01234567";
 
 process.env.ADMIN_KEY = KEY;
 process.env.GITHUB_TOKEN = TOKEN;
@@ -97,8 +98,17 @@ function githubFile(content: unknown, sha = "sha-current") {
   );
 }
 
-function githubCommit(sha = "sha-new") {
-  return new Response(JSON.stringify({ content: { sha } }), {
+function githubCommit(sha = "sha-new", commit = COMMIT_SHA) {
+  return new Response(JSON.stringify({ content: { sha }, commit: { sha: commit } }), {
+    status: 200,
+    headers: jsonHeaders,
+  });
+}
+
+function githubStatuses(
+  statuses: { context?: string; state?: string; target_url?: string }[]
+) {
+  return new Response(JSON.stringify({ statuses }), {
     status: 200,
     headers: jsonHeaders,
   });
@@ -159,6 +169,13 @@ function uploadRequest(
       ...(opts.cookie ? { cookie: opts.cookie } : {}),
     },
     body: bytes,
+  });
+}
+
+function statusRequest(commit?: string, opts: { cookie?: string } = {}): Request {
+  const query = commit === undefined ? "" : `?commit=${encodeURIComponent(commit)}`;
+  return req(`status${query}`, {
+    headers: opts.cookie ? { cookie: opts.cookie } : {},
   });
 }
 
@@ -332,14 +349,14 @@ test("GET content: returns parsed content and sha from GitHub", async () => {
 
 // ---- f. Write content --------------------------------------------------------
 
-test("PUT content: valid content commits pretty JSON and returns the new sha", async () => {
-  responder = () => githubCommit("sha-new");
+test("PUT content: valid content commits pretty JSON and returns the new sha and commit", async () => {
+  responder = () => githubCommit("sha-new", COMMIT_SHA);
   const cookie = await login();
   calls = [];
 
   const response = await api.PUT(putContentRequest({ content: contentFixture, sha: "sha-current" }, { cookie }));
   assert.equal(response.status, 200);
-  assert.deepEqual(await response.json(), { ok: true, sha: "sha-new" });
+  assert.deepEqual(await response.json(), { ok: true, sha: "sha-new", commit: COMMIT_SHA });
 
   assert.equal(calls.length, 1);
   assert.equal(calls[0].url, `https://api.github.com/repos/${REPO}/contents/src/content.json`);
@@ -485,7 +502,120 @@ test("upload: no session is unauthorized", async () => {
   assert.equal(response.status, 401);
 });
 
-// ---- h. Unknown route --------------------------------------------------------
+// ---- i. Deploy status --------------------------------------------------------
+
+test("status: no session is unauthorized", async () => {
+  const response = await api.GET(statusRequest(COMMIT_SHA));
+  assert.equal(response.status, 401);
+});
+
+test("status: missing commit is a 400", async () => {
+  const cookie = await login();
+  const response = await api.GET(statusRequest(undefined, { cookie }));
+  assert.equal(response.status, 400);
+});
+
+test("status: malformed commit is a 400", async () => {
+  const cookie = await login();
+  for (const commit of ["abc", "A".repeat(40), "g".repeat(40), COMMIT_SHA + "0"]) {
+    const response = await api.GET(statusRequest(commit, { cookie }));
+    assert.equal(response.status, 400, `expected 400 for ${JSON.stringify(commit)}`);
+  }
+});
+
+test("status: no Vercel status is pending and calls GitHub with the token", async () => {
+  responder = () => githubStatuses([]);
+  const cookie = await login();
+  calls = [];
+
+  const response = await api.GET(statusRequest(COMMIT_SHA, { cookie }));
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { state: "pending" });
+
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].url, `https://api.github.com/repos/${REPO}/commits/${COMMIT_SHA}/status`);
+  assert.equal(calls[0].method, "GET");
+  assert.equal(calls[0].headers.Authorization, `Bearer ${TOKEN}`);
+});
+
+test("status: Vercel success returns the Vercel url", async () => {
+  responder = () =>
+    githubStatuses([
+      { context: "Vercel", state: "success", target_url: "https://vercel.com/team/project/abc" },
+    ]);
+  const cookie = await login();
+
+  const response = await api.GET(statusRequest(COMMIT_SHA, { cookie }));
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    state: "success",
+    url: "https://vercel.com/team/project/abc",
+  });
+});
+
+test("status: Vercel error and failure are both failure", async () => {
+  const cookie = await login();
+  for (const state of ["error", "failure"]) {
+    responder = () =>
+      githubStatuses([{ context: "Vercel", state, target_url: "https://vercel.com/x" }]);
+    const response = await api.GET(statusRequest(COMMIT_SHA, { cookie }));
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), { state: "failure", url: "https://vercel.com/x" });
+  }
+});
+
+test("status: Vercel pending is pending", async () => {
+  responder = () => githubStatuses([{ context: "Vercel", state: "pending" }]);
+  const cookie = await login();
+
+  const response = await api.GET(statusRequest(COMMIT_SHA, { cookie }));
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { state: "pending" });
+});
+
+test("status: target_url on another host is dropped", async () => {
+  const cookie = await login();
+  for (const target_url of [
+    "https://vercel.com.evil.test/x",
+    "http://vercel.com/x",
+    "https://evil.test/",
+  ]) {
+    responder = () => githubStatuses([{ context: "Vercel", state: "success", target_url }]);
+    const response = await api.GET(statusRequest(COMMIT_SHA, { cookie }));
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), { state: "success" }, `for ${target_url}`);
+  }
+});
+
+test("status: a non-Vercel status is ignored", async () => {
+  responder = () =>
+    githubStatuses([{ context: "ci/test", state: "failure", target_url: "https://vercel.com/x" }]);
+  const cookie = await login();
+
+  const response = await api.GET(statusRequest(COMMIT_SHA, { cookie }));
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { state: "pending" });
+});
+
+test("status: GitHub 500 is unknown", async () => {
+  responder = () => new Response(JSON.stringify({ message: "boom" }), { status: 500 });
+  const cookie = await login();
+
+  const response = await api.GET(statusRequest(COMMIT_SHA, { cookie }));
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { state: "unknown" });
+});
+
+test("status: GitHub 403 is unknown, not 502", async () => {
+  responder = () => new Response(JSON.stringify({ message: "forbidden" }), { status: 403 });
+  const cookie = await login();
+
+  const response = await api.GET(statusRequest(COMMIT_SHA, { cookie }));
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { state: "unknown" });
+});
+
+// ---- j. Unknown route --------------------------------------------------------
 
 test("unknown route: returns 404 for a signed-in user", async () => {
   const cookie = await login();
