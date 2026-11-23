@@ -83,17 +83,4 @@ export type Content = {
   stats: Stat[];
 };
 
-const data = content as Content;
-
-export const {
-  profile,
-  signals,
-  featured,
-  projects,
-  smallProjects,
-  designProcess,
-  designProjects,
-  timeline,
-  extras,
-  stats,
-} = data;
+export const defaultContent = content as Content;

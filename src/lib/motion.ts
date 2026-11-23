@@ -3,12 +3,13 @@ import { ScrambleTextPlugin } from "gsap/ScrambleTextPlugin";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { SplitText } from "gsap/SplitText";
 import Lenis from "lenis";
+import { isPreview } from "./preview";
 
 gsap.registerPlugin(ScrollTrigger, SplitText, ScrambleTextPlugin);
 
 export { gsap, ScrollTrigger, SplitText };
 
-export const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+export const reducedMotion = () => isPreview || window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 export const finePointer = () => window.matchMedia("(pointer: fine)").matches;
 
 // Small labels arrive like a signal being decoded: noise that settles into the text.

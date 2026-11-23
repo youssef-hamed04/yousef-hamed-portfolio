@@ -1,10 +1,11 @@
 import { useLayoutEffect, useRef } from "react";
-import { stats } from "../data";
+import { useContent } from "../content";
 import { gsap, reducedMotion } from "../lib/motion";
 
 const format = (value: number, decimals = 0) => value.toFixed(decimals);
 
 export function Stats() {
+  const { stats } = useContent();
   const root = useRef<HTMLElement>(null);
 
   useLayoutEffect(() => {

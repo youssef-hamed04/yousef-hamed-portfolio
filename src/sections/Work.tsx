@@ -1,16 +1,17 @@
 import { useLayoutEffect, useRef } from "react";
 import { BrowserShot } from "../components/BrowserShot";
-import { featured, profile, projects, smallProjects } from "../data";
+import { useContent } from "../content";
 import { decode, gsap } from "../lib/motion";
-
-const total = projects.length + 1;
-const position = (i: number) => `${i + 1} / ${total}`;
+import { isPreview } from "../lib/preview";
 
 export function Work() {
+  const { featured, profile, projects, smallProjects } = useContent();
+  const position = (i: number) => `${i + 1} / ${projects.length + 1}`;
   const root = useRef<HTMLElement>(null);
   const track = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
+    if (isPreview) return;
     const mm = gsap.matchMedia(root);
     mm.add(
       {

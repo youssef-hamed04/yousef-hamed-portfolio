@@ -1,8 +1,9 @@
 import { useLayoutEffect, useRef } from "react";
-import { extras, timeline } from "../data";
+import { useContent } from "../content";
 import { gsap, reducedMotion } from "../lib/motion";
 
 export function Path() {
+  const { extras, timeline } = useContent();
   const root = useRef<HTMLElement>(null);
 
   useLayoutEffect(() => {

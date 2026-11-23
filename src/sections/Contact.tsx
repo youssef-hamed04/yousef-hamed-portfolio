@@ -1,10 +1,11 @@
 import { useLayoutEffect, useRef } from "react";
 import { Marquee } from "../components/Marquee";
-import { profile } from "../data";
+import { useContent } from "../content";
 import { finePointer, gsap, reducedMotion, SplitText } from "../lib/motion";
 import { useMagnetic } from "../lib/useMagnetic";
 
 export function Contact() {
+  const { profile } = useContent();
   const root = useRef<HTMLElement>(null);
   const mail = useMagnetic<HTMLAnchorElement>(0.15);
 

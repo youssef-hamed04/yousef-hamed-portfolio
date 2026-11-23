@@ -1275,3 +1275,36 @@ main,
     display: none;
   }
 }
+
+.preview-error {
+  max-width: 40ch;
+  margin: 30vh auto 0;
+  padding: 0 var(--gutter);
+  color: var(--muted);
+  text-align: center;
+}
+
+html.is-preview .rail-wrap {
+  overflow-x: auto;
+}
+html.is-preview *,
+html.is-preview *::before,
+html.is-preview *::after {
+  transition: none !important;
+  animation: none !important;
+}
+html.is-preview .gallery {
+  overflow: visible;
+}
+html.is-preview .track {
+  flex-direction: column;
+  width: auto;
+}
+html.is-preview .panel {
+  width: auto;
+  min-height: 0;
+}
+html.is-preview .gallery-progress,
+html.is-preview .work-hint {
+  display: none;
+}

@@ -4,7 +4,8 @@ import { Marquee } from "./components/Marquee";
 import { Preloader } from "./components/Preloader";
 import { ScrollSignal } from "./components/ScrollSignal";
 import { SignalField } from "./components/SignalField";
-import { profile, type SignalKey } from "./data";
+import { useContent } from "./content";
+import { type SignalKey } from "./data";
 import {
   decode,
   gsap,
@@ -24,6 +25,7 @@ import { Path } from "./sections/Path";
 import { Signals } from "./sections/Signals";
 import { Stats } from "./sections/Stats";
 import { Work } from "./sections/Work";
+import { isPreview } from "./lib/preview";
 
 const VISITED = "yh-visited";
 
@@ -37,6 +39,7 @@ const hasVisited = () => {
 };
 
 export default function App() {
+  const { profile } = useContent();
   const [skipLoader] = useState(reducedMotion);
   const [quickLoader] = useState(hasVisited);
   const [ready, setReady] = useState(skipLoader);
@@ -106,8 +109,8 @@ export default function App() {
   return (
     <>
       {!skipLoader && <Preloader onReveal={reveal} quick={quickLoader} />}
-      <Cursor />
-      <ScrollSignal />
+      {!isPreview && <Cursor />}
+      {!isPreview && <ScrollSignal />}
       <SignalField solo={shown} ready={ready} />
 
       <a className="skip" href="#main">

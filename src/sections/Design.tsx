@@ -1,11 +1,14 @@
 import { useLayoutEffect, useRef } from "react";
-import { designProcess, designProjects } from "../data";
+import { useContent } from "../content";
 import { gsap } from "../lib/motion";
+import { isPreview } from "../lib/preview";
 
 export function Design() {
+  const { designProcess, designProjects } = useContent();
   const root = useRef<HTMLElement>(null);
 
   useLayoutEffect(() => {
+    if (isPreview) return;
     const mm = gsap.matchMedia(root);
     mm.add(
       {

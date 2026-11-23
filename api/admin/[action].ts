@@ -210,6 +210,10 @@ function checkContent(content: unknown) {
     Array.isArray((c.extras as Record<string, unknown>).certifications) &&
     Array.isArray((c.extras as Record<string, unknown>).languages);
   if (!ok) throw new HttpError(400, "That doesn't look like site content.");
+  // An empty number would break the live site, which formats every stat.
+  if (!(c.stats as unknown[]).every((s) => isObject(s) && Number.isFinite(s.value))) {
+    throw new HttpError(400, "Every item in Numbers needs a number.");
+  }
   checkLinks(content);
 }
 

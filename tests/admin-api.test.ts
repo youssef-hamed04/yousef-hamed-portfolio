@@ -386,6 +386,24 @@ test("PUT content: signals array of length 2 is a 400", async () => {
   assert.equal(response.status, 400);
 });
 
+test("PUT content: a stat without a number is a 400", async () => {
+  const cookie = await login();
+  for (const value of [undefined, null, "", "20", Number.NaN]) {
+    const content = { ...contentFixture, stats: [{ value, label: "Projects" }] };
+    const response = await api.PUT(putContentRequest({ content, sha: "sha-current" }, { cookie }));
+    assert.equal(response.status, 400, `for ${String(value)}`);
+  }
+  assert.equal(calls.length, 0);
+});
+
+test("PUT content: stats with numbers are accepted", async () => {
+  const cookie = await login();
+  responder = () => githubCommit();
+  const content = { ...contentFixture, stats: [{ value: 3.6, decimals: 1, label: "GPA" }] };
+  const response = await api.PUT(putContentRequest({ content, sha: "sha-current" }, { cookie }));
+  assert.equal(response.status, 200);
+});
+
 test('PUT content: javascript: link in a project is a 400', async () => {
   const cookie = await login();
   const content = {

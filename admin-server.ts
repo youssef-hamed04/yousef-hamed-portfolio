@@ -60,6 +60,9 @@ export function contentAdmin(): Plugin {
           if (req.url === "/content" && req.method === "PUT") {
             const next = JSON.parse((await readBody(req, 5 * 1024 * 1024)).toString("utf8"));
             if (!next?.profile || !Array.isArray(next.projects)) throw new Error("That doesn't look like site content.");
+            if (!next.stats?.every((s: { value?: unknown }) => Number.isFinite(s?.value))) {
+              throw new Error("Every item in Numbers needs a number.");
+            }
             writeFileSync(CONTENT, JSON.stringify(next, null, 2) + "\n");
             return send(res, 200, { ok: true });
           }

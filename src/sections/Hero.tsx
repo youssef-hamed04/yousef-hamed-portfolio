@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef } from "react";
-import { profile, signals, type SignalKey } from "../data";
+import { useContent } from "../content";
+import { type SignalKey } from "../data";
 import { gsap, reducedMotion, scrollToHash, SplitText } from "../lib/motion";
 import { useMagnetic } from "../lib/useMagnetic";
 
@@ -10,6 +11,7 @@ type Props = {
 };
 
 export function Hero({ ready, solo, onSolo }: Props) {
+  const { profile, signals } = useContent();
   const root = useRef<HTMLElement>(null);
   const workBtn = useMagnetic<HTMLAnchorElement>();
   const mailBtn = useMagnetic<HTMLAnchorElement>();

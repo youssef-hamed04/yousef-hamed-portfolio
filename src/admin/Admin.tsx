@@ -1,11 +1,19 @@
 /// <reference types="vite/client" />
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { sections, type Field, type Section } from "./schema";
+import { fromSameOrigin } from "../lib/preview";
 
 type Json = any;
 
 const ONLINE = !import.meta.env.DEV;
 const RawBaseContext = createContext("");
+type Deployment = { state: "pending" | "success" | "failure" | "timeout"; url?: string };
+const deploymentText = {
+  pending: "Updating the live site…",
+  success: "Live. Your changes are on the site.",
+  failure: "The update failed, so the site still shows the previous version.",
+  timeout: "Couldn't confirm the update. Check the live site in a few minutes.",
+};
 
 const api = async (path: string, init: RequestInit = {}) => {
   const headers = new Headers(init.headers);
@@ -52,6 +60,100 @@ export default function Admin() {
   const [publishing, setPublishing] = useState<"idle" | "confirm" | "running" | "done">("idle");
   const [log, setLog] = useState("");
   const logRef = useRef<HTMLPreElement>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const previewReady = useRef(false);
+  const draftRef = useRef({ content, section: active, rawBase });
+  draftRef.current = { content, section: active, rawBase };
+  const [wide, setWide] = useState(() => window.matchMedia("(min-width: 1200px)").matches);
+  const [desktopPreview, setDesktopPreview] = useState(() => {
+    try { return localStorage.getItem("yh-preview-visible") !== "false"; } catch { return true; }
+  });
+  const [mobilePreview, setMobilePreview] = useState(false);
+  const previewVisible = wide ? desktopPreview : mobilePreview;
+  const [deployment, setDeployment] = useState<Deployment | null>(null);
+  const cancelPoll = useRef<() => void>(() => {});
+  const mounted = useRef(false);
+
+  // Only the wide-screen choice is remembered; on narrow screens the button just swaps views.
+  const togglePreview = () => {
+    if (!wide) return setMobilePreview(!mobilePreview);
+    setDesktopPreview(!desktopPreview);
+    try {
+      localStorage.setItem("yh-preview-visible", String(!desktopPreview));
+    } catch {
+      // Storage may be blocked; the choice just isn't remembered.
+    }
+  };
+
+  useEffect(() => {
+    mounted.current = true;
+    const media = window.matchMedia("(min-width: 1200px)");
+    const resize = () => setWide(media.matches);
+    media.addEventListener("change", resize);
+    const receive = (event: MessageEvent) => {
+      if (event.source !== iframeRef.current?.contentWindow || !fromSameOrigin(event)) return;
+      if (!event.data || typeof event.data !== "object" || event.data.type !== "yh-preview-ready") return;
+      previewReady.current = true;
+      iframeRef.current?.contentWindow?.postMessage({ type: "yh-preview", ...draftRef.current }, window.location.origin);
+    };
+    window.addEventListener("message", receive);
+    return () => {
+      mounted.current = false;
+      media.removeEventListener("change", resize);
+      window.removeEventListener("message", receive);
+      cancelPoll.current();
+    };
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      if (previewReady.current) iframeRef.current?.contentWindow?.postMessage({ type: "yh-preview", content, rawBase }, window.location.origin);
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [content, rawBase]);
+
+  useEffect(() => {
+    if (previewReady.current) iframeRef.current?.contentWindow?.postMessage({ type: "yh-preview", section: active }, window.location.origin);
+  }, [active, previewVisible]);
+
+  const watchDeployment = (commit: string) => {
+    const controller = new AbortController();
+    let timer: number;
+    let deadline: number;
+    let cancelled = false;
+    const cancel = () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+      window.clearTimeout(deadline);
+      controller.abort();
+    };
+    cancelPoll.current = cancel;
+    setDeployment({ state: "pending" });
+    deadline = window.setTimeout(() => {
+      cancel();
+      setDeployment({ state: "timeout" });
+    }, 5 * 60 * 1000);
+    const poll = async () => {
+      try {
+        const response = await api(`/status?commit=${encodeURIComponent(commit)}`, { signal: controller.signal });
+        if (cancelled) return;
+        if (response.status === 401) { cancel(); return; }
+        if (response.ok) {
+          const result = await response.json();
+          if (cancelled) return;
+          if (result.state === "success" || result.state === "failure") {
+            cancel();
+            setDeployment({ state: result.state, url: result.url });
+            return;
+          }
+        }
+      } catch {
+        if (cancelled) return;
+      }
+      timer = window.setTimeout(poll, 5000);
+    };
+    timer = window.setTimeout(poll, 3000);
+  };
 
   const dirty = useMemo(() => content && JSON.stringify(content) !== JSON.stringify(saved), [content, saved]);
   const section = sections.find((s) => s.id === active)!;
@@ -83,6 +185,8 @@ export default function Admin() {
   useEffect(() => {
     if (ONLINE) {
       const expired = () => {
+        cancelPoll.current();
+        setDeployment(null);
         setSession("signed-out");
         setPublishing("idle");
       };
@@ -140,6 +244,8 @@ export default function Admin() {
       if (!r.ok) throw new Error((await r.json()).error);
       setAuthError("");
       setPublishing("idle");
+      cancelPoll.current();
+      setDeployment(null);
       setSession("signed-out");
     } catch (error) {
       setStatus({ tone: "error", text: error instanceof Error ? error.message : "Couldn't sign out." });
@@ -177,6 +283,8 @@ export default function Admin() {
   const publish = async () => {
     if (ONLINE) {
       if (!dirty || publishing === "running") return;
+      cancelPoll.current();
+      setDeployment(null);
       setPublishing("running");
       setStatus({ tone: "busy", text: "Publishing…" });
       try {
@@ -186,10 +294,12 @@ export default function Admin() {
           body: JSON.stringify({ content, sha }),
         });
         const body = await r.json();
+        if (!mounted.current) return;
         if (!r.ok) throw new Error(body.error);
         setSha(body.sha);
         setSaved(content);
-        setStatus({ tone: "ok", text: "Published. The live site updates in about a minute." });
+        setStatus(body.commit ? null : { tone: "ok", text: "Published." });
+        if (body.commit) watchDeployment(body.commit);
       } catch (error) {
         setStatus({ tone: "error", text: `Not published: ${error instanceof Error ? error.message : "Request failed."}` });
       } finally {
@@ -240,7 +350,7 @@ export default function Admin() {
   const update = (next: Json) => setContent((c: Json) => setPath(c, section.path, next));
 
   return (
-    <div className="adm">
+    <div className={`adm${previewVisible ? " has-preview" : ""}`}>
       <aside className="adm-side">
         <p className="adm-brand">
           YH <span>dashboard</span>
@@ -265,7 +375,23 @@ export default function Admin() {
             <p className="adm-help">{section.help}</p>
           </div>
           <div className="adm-actions">
+            <button className="adm-btn adm-preview-toggle" aria-pressed={previewVisible} onClick={togglePreview}>
+              {!wide && previewVisible ? "Edit" : "Preview"}
+            </button>
             {status && <span className={`adm-status is-${status.tone}`}>{status.text}</span>}
+            {ONLINE && deployment?.state === "pending" && (
+              <span className="adm-deployment">
+                <progress aria-label="Updating the live site" />
+                {deploymentText.pending}
+              </span>
+            )}
+            <span className="adm-deployment" role="status">
+              {ONLINE && deployment && deployment.state !== "pending" ? <>
+                {deploymentText[deployment.state]}
+                {deployment.state === "success" && <a href="/" target="_blank" rel="noreferrer">View site</a>}
+                {deployment.state === "failure" && deployment.url && <a href={deployment.url} target="_blank" rel="noreferrer">See what went wrong</a>}
+              </> : status?.tone !== "busy" ? <span className="adm-sr-only">{status?.text}</span> : null}
+            </span>
             {dirty && <span className="adm-dirty">Unsaved changes</span>}
             {!ONLINE && <button className="adm-btn" onClick={save} disabled={!dirty}>
               Save
@@ -309,10 +435,15 @@ export default function Admin() {
           </div>
         )}
 
-        <RawBaseContext.Provider value={rawBase}>
-          <SectionEditor section={section} value={value} onChange={update} />
-        </RawBaseContext.Provider>
+        <div className="adm-editor">
+          <RawBaseContext.Provider value={rawBase}>
+            <SectionEditor section={section} value={value} onChange={update} />
+          </RawBaseContext.Provider>
+        </div>
       </main>
+      <div className="adm-preview-pane">
+        <iframe ref={iframeRef} src="/?preview" title="Preview of your site" />
+      </div>
     </div>
   );
 }

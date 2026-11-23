@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { SignalKey } from "../data";
+import { reducedMotion } from "../lib/motion";
 
 // Three component waves, one per discipline. The hero draws their sum.
 const sine = (x: number) => Math.sin(x);
@@ -27,7 +28,7 @@ export function Waveform({ solo }: Props) {
   useEffect(() => {
     const canvas = canvasRef.current!;
     const ctx = canvas.getContext("2d")!;
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const reduced = reducedMotion();
     const css = getComputedStyle(document.documentElement);
     const gold = css.getPropertyValue("--signal").trim();
     const faint = css.getPropertyValue("--trace").trim();

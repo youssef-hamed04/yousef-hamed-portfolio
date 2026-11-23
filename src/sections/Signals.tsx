@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef } from "react";
 import { WaveGlyph } from "../components/WaveGlyph";
-import { signals, type SignalKey } from "../data";
+import { useContent } from "../content";
+import { type SignalKey } from "../data";
 import { finePointer, gsap, reducedMotion } from "../lib/motion";
 
 type Props = {
@@ -10,6 +11,7 @@ type Props = {
 };
 
 export function Signals({ solo, onHover }: Props) {
+  const { signals } = useContent();
   const root = useRef<HTMLElement>(null);
 
   useLayoutEffect(() => {
