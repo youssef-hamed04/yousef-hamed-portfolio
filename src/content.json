@@ -16,12 +16,15 @@
       "key": "engineer",
       "label": "Engineer",
       "wave": "Sine",
-      "body": "Front-end work in React, Next.js and React Native, with typed APIs, auth that keeps tokens out of the browser, and full Arabic and RTL support. My AI training at Zewail City covered machine learning end to end, from notebook to deployed model.",
+      "body": "Front-end work in React, Next.js and React Native, with typed APIs, auth that keeps tokens out of the browser, and full Arabic and RTL support. On the back end I build with PHP and Laravel: MySQL databases, migrations and Eloquent models, and Laravel's built-in sign-in. My AI training at Zewail City covered machine learning end to end, from notebook to deployed model.",
       "tools": [
         "React",
         "Next.js",
         "React Native",
         "TypeScript",
+        "PHP",
+        "Laravel",
+        "MySQL",
         "Python",
         "scikit-learn"
       ]
